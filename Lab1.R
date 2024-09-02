@@ -20,11 +20,11 @@ isPalindromic <- function(num){
 }
 isPalindromic(100)
 
-nextPalindrome <- function(num){
+nextPalindrome <- function(number){
   
   # same as before, put num to array
   
-  num <- as.character(num)
+  num <- as.character(number)
   num <- strsplit(num, "")[[1]]
   
   # take first half of array, rounded down
@@ -36,7 +36,7 @@ nextPalindrome <- function(num){
   
   middle = ""
   if(length(num)%%2 != 0){
-    middle = num[midpoint]
+    middle = num[midpoint+1]
   }
   
   last = rev(first)
@@ -47,4 +47,14 @@ nextPalindrome <- function(num){
   print(final)
 }
 
-nextPalindrome(329091)
+nextPalindrome <- function(num){
+  status <- isPalindromic(num)
+  print(status$isPalindromic)
+  while(status$isPalindromic == FALSE){
+    num = num + 1
+    status <- isPalindromic(num)
+  }
+  return(num)
+}
+
+nextPalindrome(30113)

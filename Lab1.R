@@ -1,18 +1,19 @@
-is_palandrome <- function(number){
+is_palandrome <- function(num){
   # is palandromic
   # if number == number[::-1]
   
-  # need to get number into list
-  #number = as.numeric(strsplit(number,""))
+  # remove trailing 0's (since they will appear before number anyways)
   
-  number <- as.character(number)
-  number <- strsplit(number, "")[[1]]
-  n2 <- rev(number)
-  print((n2))
-  print((number))
+  # convert number to string
+  # get number into list using strsplit
+  # reverse list
+  # check if lists are equal
   
-  
-  identical(number,n2)
+  num <- as.character(num)
+  num <- strsplit(num, "")[[1]]
+  n2 <- rev(num)
+  status <- identical(num,n2)
+  return(list(isPalindromic = status, reversed = n2))
 }
 
-is_palandrome(12321)
+is_palandrome(728827)

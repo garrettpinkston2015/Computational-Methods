@@ -1,4 +1,4 @@
-is_palandrome <- function(num){
+isPalindromic <- function(num){
   # is palandromic
   # if number == number[::-1]
   
@@ -18,5 +18,19 @@ is_palandrome <- function(num){
   status <- identical(num,n2)
   return(list(isPalindromic = status, reversed = n2))
 }
+isPalindromic(100)
 
-is_palandrome(728827)
+nextPalindrome <- function(num){
+  
+  # same as before, put num to array
+  
+  num <- as.character(num)
+  num <- strsplit(num, "")[[1]]
+  
+  # take first half of array, rounded down
+  # take middle of array (only if odd)
+  # reverse first half of array. combine all 3 segments
+  
+  midpoint = floor(length(num)/2)
+  
+}

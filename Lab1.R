@@ -32,5 +32,19 @@ nextPalindrome <- function(num){
   # reverse first half of array. combine all 3 segments
   
   midpoint = floor(length(num)/2)
+  first = num[1:midpoint]
   
+  middle = ""
+  if(length(num)%%2 != 0){
+    middle = num[midpoint]
+  }
+  
+  last = rev(first)
+  
+  final = c(first,middle,last)
+  final = as.numeric(paste(final,collapse = ""))
+  
+  print(final)
 }
+
+nextPalindrome(329091)

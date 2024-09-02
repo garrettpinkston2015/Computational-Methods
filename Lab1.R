@@ -3,6 +3,9 @@ is_palandrome <- function(num){
   # if number == number[::-1]
   
   # remove trailing 0's (since they will appear before number anyways)
+  while(num %% 10 == 0 && num != 0){
+    num = num/10
+  }
   
   # convert number to string
   # get number into list using strsplit

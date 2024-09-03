@@ -1,3 +1,9 @@
+
+
+
+
+# Palindromes
+
 isPalindromic <- function(num){
   # is palandromic
   # if number == number[::-1]
@@ -20,33 +26,6 @@ isPalindromic <- function(num){
 }
 isPalindromic(100)
 
-nextPalindrome <- function(number){
-  
-  # same as before, put num to array
-  
-  num <- as.character(number)
-  num <- strsplit(num, "")[[1]]
-  
-  # take first half of array, rounded down
-  # take middle of array (only if odd)
-  # reverse first half of array. combine all 3 segments
-  
-  midpoint = floor(length(num)/2)
-  first = num[1:midpoint]
-  
-  middle = ""
-  if(length(num)%%2 != 0){
-    middle = num[midpoint+1]
-  }
-  
-  last = rev(first)
-  
-  final = c(first,middle,last)
-  final = as.numeric(paste(final,collapse = ""))
-  
-  print(final)
-}
-
 nextPalindrome <- function(num){
   status <- isPalindromic(num)
   while(status$isPalindromic == FALSE){
@@ -57,3 +36,5 @@ nextPalindrome <- function(num){
 }
 
 nextPalindrome(19272719)
+
+

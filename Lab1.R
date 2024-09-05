@@ -21,8 +21,14 @@ df <- df[(df$MinimumAge - df$MinimumExperience) > 18,] #filter all rows where pe
 # Will use IQR to remove outliers
 quartiles <- quantile(df$Salary, probs = c(0.25,0.75)) #only returns Q1 and Q3 as a list
 salaryRange <- IQR(df$Salary) #returns scalar
-lowerLimit <- quartiles[1] - (1.5*salaryRange) # lower than first quartile
-upperLimit <- quartiles[2] + (1.5*salaryRange) # above third quartile
+print(quartiles[1] - (1.5*salaryRange))
+
+lowerLimit <- quartiles[1] - (salaryRange) # lower than first quartile
+upperLimit <- quartiles[2] + (salaryRange) # above third quartile
+
+print(lowerLimit)
+df <- df[df$Salary > lowerLimit,] # keep all rows where salary is above lower limit
+df <- df[df$Salary < upperLimit,] # keep all rows where salary is below upper limit
 
 
 # Palindromes

@@ -11,24 +11,13 @@ descriptors <- c("Timestamp","Age","Industry","Title","Additional Title Info",
                  "Education", "Gender", "Race")
 
 colnames(df) <- descriptors
-df <- df[df$Currency == 'USD',]
-
-df$MinimumExperience = as.numeric(substr(df$`Total Experience`,1,1))
-df$MinimumAge = (substr(df$Age,1,1))
-
-df$MinimumExperience <- as.numeric(gsub("([0-9]+).*$", "\\1", df$`Total Experience`)) # found code on stackoverflow with RegEx to help
-df$MinimumAge <- as.numeric(gsub("([0-9]+).*$", "\\1", df$Age)) # found code on stackoverflow with RegEx to help
-
-df$MinimumAge <- as.numeric(gsub(".*/|-.*", "", df$Age)) #extract first number in Age
+df <- df[df$Currency == 'USD',] # Keep all entries of just USD
 
 
+df$MinimumExperience <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$`Total Experience`)) # found code on stackoverflow with RegEx to help
+df$MinimumAge <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$Age)) # found code on stackoverflow with RegEx to help
 
-
-
-
-
-
-df$Invalid <- df$MinimumAge - df$MinimumExperience
+df <- df[(df$MinimumAge - df$MinimumExperience) > 18,] #filter all rows where people started work before 18
 
 
 # Palindromes

@@ -1,4 +1,22 @@
+# AskAManager
 
+setwd('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/')
+df <- read.csv('AskAManager.csv')
+
+names(df)
+df$X = NULL
+descriptors <- c("Timestamp","Age","Industry","Title","Additional Title Info",
+                 "Salary","Bonus Pay","Currency","Other Currency","Additional Income Info",
+                 "Country", "State", "City", "Total Experience", "Industry Experience", 
+                 "Education", "Gender", "Race")
+
+colnames(df) <- descriptors
+df <- df[df$Currency == 'USD',]
+
+df$MinimumExperience = as.numeric(substr(df$`Total Experience`,1,1))
+df$MinimumAge = (substr(df$Age,1,1))
+
+df$MinimumExperience <- gsub( "-.*", "", df$`Total Experience`)
 
 
 

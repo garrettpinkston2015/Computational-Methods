@@ -32,6 +32,10 @@ paste("Class", which.min(corrs), "achieved the smallest correlation with a coeff
 paste("Class", which.max(corrs), "achieved the smallest correlation with a coefficient of", round(max(corrs),4))
 
 
+paste("The alcohol content of the wine with the highest color intensity is", wine$Alcohol[which.max(wine$`Color intensity`)])
+
+higherPro <- nrow(wine[wine$Proanthocyanins > wine$Ash,])
+paste0("Approximately ", round((higherPro/nrow(wine)*100),2), "% of the wines contain higher Proanthocyanins than Ash")
 
 # AskAManager
 

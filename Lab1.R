@@ -1,3 +1,24 @@
+# Wines
+setwd('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/')
+
+wine <- read.table("wine.data",sep=",")
+
+wineNames <- c("Class", "Alcohol","Malic acid","Ash","Alcalinity of ash", "Magnesium", "Total phenols", 
+  "Flavanoids","Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", 
+  "OD280/OD315 of diluted wines", "Proline")
+
+colnames(wine) <- wineNames
+
+counts <- c(59,71,48)
+bool <- TRUE
+for (i in 1:3){
+  if(nrow(wine[wine$Class==i,]) != counts[i]){
+    bool <- FALSE
+  }
+}
+
+bool
+
 # AskAManager
 
 setwd('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/')
@@ -21,15 +42,14 @@ df <- df[(df$MinimumAge - df$MinimumExperience) > 18,] #filter all rows where pe
 # Will use IQR to remove outliers
 quartiles <- quantile(df$Salary, probs = c(0.25,0.75)) #only returns Q1 and Q3 as a list
 salaryRange <- IQR(df$Salary) #returns scalar
-print(quartiles[1] - (1.5*salaryRange))
 
-lowerLimit <- quartiles[1] - (salaryRange) # lower than first quartile
-upperLimit <- quartiles[2] + (salaryRange) # above third quartile
+lowerLimit <- quartiles[1] - (1.5 * salaryRange) # way below first quartile 
+upperLimit <- quartiles[2] + (1.5 * salaryRange) # way above third quartile
 
-print(lowerLimit)
 df <- df[df$Salary > lowerLimit,] # keep all rows where salary is above lower limit
 df <- df[df$Salary < upperLimit,] # keep all rows where salary is below upper limit
 
+# I used IQR to remove outliers because it is a robust method that takes
 
 # Palindromes
 

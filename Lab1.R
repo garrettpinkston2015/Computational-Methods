@@ -19,6 +19,20 @@ for (i in 1:3){
 
 bool
 
+alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
+alcColorCor
+
+corrs = c()
+for (i in 1:3){
+  wineCopy <- wine[wine$Class == i,]
+  corrs[i] <- cor(wineCopy$Alcohol, wineCopy$`Color intensity`)
+}
+
+paste("Class", which.min(corrs), "achieved the smallest correlation with a coefficient of", round(min(corrs),4))
+paste("Class", which.max(corrs), "achieved the smallest correlation with a coefficient of", round(max(corrs),4))
+
+
+
 # AskAManager
 
 setwd('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/')

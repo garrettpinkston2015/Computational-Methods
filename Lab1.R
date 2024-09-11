@@ -37,6 +37,16 @@ paste("The alcohol content of the wine with the highest color intensity is", win
 higherPro <- nrow(wine[wine$Proanthocyanins > wine$Ash,])
 paste0("Approximately ", round((higherPro/nrow(wine)*100),2), "% of the wines contain higher Proanthocyanins than Ash")
 
+totalAvg <- colMeans(wine)
+classAvg <- c()
+for (i in 1:3){
+  wineCopy <- wine[wine$Class == i,]
+  classAvg[i] <- colMeans(wineCopy)
+}
+
+
+
+
 # AskAManager
 
 setwd('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/')

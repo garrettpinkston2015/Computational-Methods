@@ -1,0 +1,59 @@
+---
+title: "Lab 1"
+author: "Garrett Pinkston"
+format: html
+editor: visual
+---
+
+## Link to Github
+
+github: <https://github.com/garrettpinkston2015/Computational-Methods>
+
+## Problem 1- Wine Data
+
+a\) Import Data and Rename Columns
+
+```{r}
+
+wine <- read.table('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/wine.data',sep=",")
+
+
+wineNames <- c("Class", "Alcohol","Malic acid","Ash","Alcalinity of ash", "Magnesium", "Total phenols", 
+  "Flavanoids","Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", 
+  "OD280/OD315 of diluted wines", "Proline")
+
+colnames(wine) <- wineNames
+
+
+```
+
+b\) Verify wine counts match across each class
+
+```{r}
+counts <- c(59,71,48)
+bool <- TRUE
+for (i in 1:3){
+  if(nrow(wine[wine$Class==i,]) != counts[i]){
+    bool <- FALSE
+  }
+}
+
+bool
+
+alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
+alcColorCor
+```
+
+```{counts <- c(59,71,48)}
+bool <- TRUE
+for (i in 1:3){
+  if(nrow(wine[wine$Class==i,]) != counts[i]){
+    bool <- FALSE
+  }
+}
+
+bool
+
+alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
+alcColorCor
+```

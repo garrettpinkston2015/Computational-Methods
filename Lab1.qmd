@@ -161,8 +161,8 @@ d\) Assume no one starts working before age 18. Eliminate any rows for which the
 ```{r}
 lengthBefore <- lengthAfter
 
-df$MinimumExperience <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$`Total Experience`)) # found code on stackoverflow with RegEx to help
-df$MinimumAge <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$Age)) # found code on stackoverflow with RegEx to help
+df$MinimumExperience <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$`Total Experience`)) # I found code on stackoverflow with RegEx to help. Used chatGPT to help with errors.
+df$MinimumAge <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$Age)) 
 df <- df[(df$MinimumAge - df$MinimumExperience) > 18,] #filter all rows where people started work before 18
 lengthAfter <- nrow(df)
 
@@ -240,7 +240,7 @@ b\) Create a function nextPalindrome that finds the next palindromic number stri
 
 #' Find next palindrome of a given number.
 #'
-#' This function finds the smallest palindromic number greater than or equal to the given input number. 
+#' This function finds the smallest palindromic number greater than the given input number. 
 #' It increments the input number until it finds a palindromic number.
 #'
 #' @param num The input number. It can be a numeric value or a string representing a number.
@@ -263,7 +263,7 @@ b\) Create a function nextPalindrome that finds the next palindromic number stri
 nextPalindrome <- function(num){
   num <- suppressWarnings(as.numeric(num)) # Try to convert input to numeric
   
-    if(!is.na(num)){
+  if(!is.na(num)){
     num = num + 1
     status <- isPalindromic(num)
     while(status$isPalindromic == FALSE){

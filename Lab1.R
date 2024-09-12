@@ -61,7 +61,12 @@ descriptors <- c("Timestamp","Age","Industry","Title","Additional Title Info",
                  "Education", "Gender", "Race")
 
 colnames(df) <- descriptors #replace column names with accurate descriptions
+
+lengthBefore = nrow(df)
 df <- df[df$Currency == 'USD',] # Keep all entries of just USD
+lengthAfter = nrow(df)
+lengthBefore
+lengthAfter
 
 df$MinimumExperience <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$`Total Experience`)) # found code on stackoverflow with RegEx to help
 df$MinimumAge <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$Age)) # found code on stackoverflow with RegEx to help

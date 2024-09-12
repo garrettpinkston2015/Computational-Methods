@@ -40,20 +40,81 @@ for (i in 1:3){
 
 bool
 
-alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
-alcColorCor
 ```
 
-```{counts <- c(59,71,48)}
-bool <- TRUE
+c1) Correlation between alcohol color and intensity?
+
+```{r}
+alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
+alcColorCor
+
+```
+
+c2) Class with the highest and lowest correlation?
+
+```{r}
+corrs = c()
 for (i in 1:3){
-  if(nrow(wine[wine$Class==i,]) != counts[i]){
-    bool <- FALSE
-  }
+  wineCopy <- wine[wine$Class == i,]
+  corrs[i] <- cor(wineCopy$Alcohol, wineCopy$`Color intensity`)
 }
 
-bool
+paste("Class", which.min(corrs), "achieved the lowest correlation with a coefficient of", round(min(corrs),4))
+paste("Class", which.max(corrs), "achieved the highest correlation with a coefficient of", round(max(corrs),4))
 
-alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
-alcColorCor
+
 ```
+
+c3) What is the alcohol content of the wine with the highest color intensity?
+
+```{r}
+paste("The alcohol content of the wine with the highest color intensity is", wine$Alcohol[which.max(wine$`Color intensity`)])
+
+```
+
+c4) What percentage of wines had a higher content of proanthocyanins compare to ash?
+
+```{r}
+higherPro <- nrow(wine[wine$Proanthocyanins > wine$Ash,])
+paste0("Approximately ", round((higherPro/nrow(wine)*100),2), "% of the wines contain higher Proanthocyanins than Ash")
+
+
+```
+
+d) Create a table identifying the average value of each variable, providing one row for the overall average, and one row per class with class averages. (This table does not need to be “fancy” but should clearly identify what each value represents.)
+
+```{r}
+averages = c()
+
+averages <- sapply(df, mean,-1)
+
+
+wineSplit <- split(wine[-1],wine$Class)
+
+
+averages[1] <- colMeans(wine) #total averages
+for (i in 1:3){
+  wineCopy <- wine[wine$Class == i,]
+  averages[i+1] <- colMeans(wineCopy) #compute averages for each class
+}
+
+as.table(averages)
+```
+
+```{r}
+averages = c()
+
+averages <- sapply(df, mean,-1)
+
+
+dfSplit <- split(wine[-1],wine$Class)
+
+averages[1] <- colMeans(wine) #total averages
+for (i in 1:3){
+  wineCopy <- wine[wine$Class == i,]
+  averages[i+1] <- colMeans(wineCopy) #compute averages for each class
+}
+
+as.table(averages)
+```
+

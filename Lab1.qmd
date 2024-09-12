@@ -90,6 +90,8 @@ averages <- sapply(df, mean,-1)
 
 
 wineSplit <- split(wine[-1],wine$Class)
+class_means <- sapply(df_split, colMeans(na.rm = TRUE)) #https://stackoverflow.com/questions/18879582/in-r-how-to-subset-data-frame-in-sapply
+
 
 
 averages[1] <- colMeans(wine) #total averages

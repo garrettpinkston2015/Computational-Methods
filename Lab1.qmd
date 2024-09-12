@@ -42,7 +42,7 @@ bool
 
 ```
 
-c1\) Correlation between alcohol color and intensity?
+c1) Correlation between alcohol color and intensity?
 
 ```{r}
 alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
@@ -50,7 +50,7 @@ alcColorCor
 
 ```
 
-c2\) Class with the highest and lowest correlation?
+c2) Class with the highest and lowest correlation?
 
 ```{r}
 corrs = c()
@@ -65,14 +65,14 @@ paste("Class", which.max(corrs), "achieved the highest correlation with a coeffi
 
 ```
 
-c3\) What is the alcohol content of the wine with the highest color intensity?
+c3) What is the alcohol content of the wine with the highest color intensity?
 
 ```{r}
 paste("The alcohol content of the wine with the highest color intensity is", wine$Alcohol[which.max(wine$`Color intensity`)])
 
 ```
 
-c4\) What percentage of wines had a higher content of proanthocyanins compare to ash?
+c4) What percentage of wines had a higher content of proanthocyanins compare to ash?
 
 ```{r}
 higherPro <- nrow(wine[wine$Proanthocyanins > wine$Ash,])
@@ -81,7 +81,7 @@ paste0("Approximately ", round((higherPro/nrow(wine)*100),2), "% of the wines co
 
 ```
 
-d\)  Create a table identifying the average value of each variable, providing one row for the overall average, and one row per class with class averages. (This table does not need to be “fancy” but should clearly identify what each value represents.)
+d\) Create a table identifying the average value of each variable, providing one row for the overall average, and one row per class with class averages. (This table does not need to be “fancy” but should clearly identify what each value represents.)
 
 ```{r}
 overallMeans <- colMeans(wine[-1], na.rm = TRUE)
@@ -95,7 +95,7 @@ allMeans <- rbind(Overall = overallMeans, t(classMeans))
 as.table(t(t(allMeans)))
 ```
 
-e\)  Carry out a series of t-tests to examine whether the level of phenols differs across the three classes. Present the R output and interpret the results. (You may use an existing R function to carry out the t-test, or for minor extra credit, manually write your own calculation of the t-test p-values.)
+e\) Carry out a series of t-tests to examine whether the level of phenols differs across the three classes. Present the R output and interpret the results. (You may use an existing R function to carry out the t-test, or for minor extra credit, manually write your own calculation of the t-test p-values.)
 
 ```{r}
 
@@ -109,7 +109,7 @@ ttest_1_2 <- t.test(phenolsClass_1, phenolsClass_2)
 ttest_1_3 <- t.test(phenolsClass_1, phenolsClass_3)
 ttest_2_3 <- t.test(phenolsClass_2, phenolsClass_3)
 
-paste0("The t-test between classes 1 and 2 was ", ttest_1_2$p.value,4)
+paste0("The t-test between classes 1 and 2 was ", ttest_1_2$p.value)
 paste0("The t-test between classes 1 and 3 was ", ttest_1_3$p.value)
 paste0("The t-test between classes 2 and 3 was ", ttest_2_3$p.value)
 
@@ -132,6 +132,7 @@ df$X = NULL #remove first column (junk) dataframe
 ```
 
 b\) Clean up the variable names. Simplify them.
+
 ```{r}
 df$X = NULL #remove first column (junk) dataframe
 
@@ -144,9 +145,7 @@ colnames(df) <- descriptors #replace column names with descriptions
 
 ```
 
-
 c\) Restrict the data to those being paid in US dollars (USD). Show that it worked by confirming the number of observations before and after restricting the data.
-
 
 ```{r}
 lengthBefore <- nrow(df)
@@ -158,7 +157,6 @@ paste0("The dataset shrunk from ", lengthBefore, " observations down to ",length
 ```
 
 d\) Assume no one starts working before age 18. Eliminate any rows for which their age, years of experience in their field, and years of experience total are impossible. Again, confirm the number of observations. (Hint: Making these variables factor may make your life easier.)
-
 
 ```{r}
 lengthBefore <- lengthAfter
@@ -173,8 +171,7 @@ paste0("After removing invalid experience the dataset shrunk from ", lengthBefor
 
 ```
 
-e\) A lot of the incomes are likely false. Eliminate any rows with extremely low or extremely high salaries. I’ll leave the decision of what thresholds to use up to you; you could choose to eliminate only impossible values, or you could restrict the sample to eliminate the extreme values even if they are realistic (e.g. removing the billionaires or the folks making < $1,000 per year). You must justify your choice, along with either a cited source or an exploration the data, or some combination.
-
+e\) A lot of the incomes are likely false. Eliminate any rows with extremely low or extremely high salaries. I’ll leave the decision of what thresholds to use up to you; you could choose to eliminate only impossible values, or you could restrict the sample to eliminate the extreme values even if they are realistic (e.g. removing the billionaires or the folks making \< \$1,000 per year). You must justify your choice, along with either a cited source or an exploration the data, or some combination.
 
 ```{r}
 lengthBefore <- lengthAfter
@@ -199,8 +196,27 @@ paste0("After removing income outliers the dataset shrunk from ", lengthBefore, 
 
 a\) Write function isPalindromic that checks if a given positive integer is a palindrome. Be sure to provide a reasonable error on an invalid input. Be sure to document your function (see instructions above).
 
-
 ```{r}
+
+#' Check if a number is palandromic.
+#'
+#' This function checks whether a number is palandromic (meaning it is the same forward and backwards).
+#' It first attempts to convert to a numeric value (if possible) and then checks if it is the same forwards and backwards.
+#'
+#' @param num Number to be checked. Input can be a numeric value or string representing a numeric value.
+#'
+#' @return Returns list containing two elements:
+#' \item{isPalandromic}{A logical value whether number is palandromic}
+#' \item{reversed}{A vector representing the reversed digits of the number}
+
+#' @export
+#'
+#' @examples
+#' isPalindromic("12321")
+#' # Returns: $isPalindromic [1] TRUE, $reversed [1] "1" "2" "3" "2" "1"
+#' 
+#' isPalindromic(12321)
+#' # Returns: $isPalindromic [1] TRUE, $reversed [1] "1" "2" "3" "2" "1"
 
 isPalindromic <- function(num){
   num <- suppressWarnings(as.numeric(num)) # Try to convert input to numeric
@@ -220,23 +236,57 @@ isPalindromic <- function(num){
 
 b\) Create a function nextPalindrome that finds the next palindromic number strictly greater than the input. Be sure to provide a reasonable error on an invalid input.
 
-
-
 ```{r}
 
-isPalindromic <- function(num){
+#' Find next palindrome of a given number.
+#'
+#' This function finds the smallest palindromic number greater than or equal to the given input number. 
+#' It increments the input number until it finds a palindromic number.
+#'
+#' @param num The input number. It can be a numeric value or a string representing a number.
+#'
+#' @return The next palindromic number greater than or equal to the input number.
+#' If the input is not numeric, the function stops with an error message.
+#
+#' @export
+#'
+#' @examples
+#' nextPalindrome("123") 
+#' # Returns: 131
+#'
+#' nextPalindrome("999")
+#' # Returns: 1001
+#' 
+#' nextPalindrome("hello")
+#' # Error: Input is non-numeric
+
+nextPalindrome <- function(num){
   num <- suppressWarnings(as.numeric(num)) # Try to convert input to numeric
   
-  if(!is.na(num)){
-  num <- as.character(num) # convert to string
-  num <- strsplit(num, "")[[1]] # split number into list
-  n2 <- rev(num) #reverse list
-  status <- identical(num,n2) #see if reverse list equals original list
-  return(list(isPalindromic = status, reversed = n2))
-  } else {
+    if(!is.na(num)){
+    num = num + 1
+    status <- isPalindromic(num)
+    while(status$isPalindromic == FALSE){
+      num = num + 1
+      status <- isPalindromic(num)
+    }
+    return(num)
+    } else {
     stop("Input is non-numeric")
   }
 }
 
 ```
 
+c\) Use these functions to find the next palindrome for each of the following:
+
+```{r}
+
+nextPalindrome(391)
+nextPalindrome(9928)
+nextPalindrome(19272719)
+nextPalindrome(109)
+nextPalindrome(2)
+
+
+```

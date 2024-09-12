@@ -42,7 +42,7 @@ bool
 
 ```
 
-c1) Correlation between alcohol color and intensity?
+c1\) Correlation between alcohol color and intensity?
 
 ```{r}
 alcColorCor <- cor(wine$Alcohol,wine$`Color intensity`)
@@ -50,7 +50,7 @@ alcColorCor
 
 ```
 
-c2) Class with the highest and lowest correlation?
+c2\) Class with the highest and lowest correlation?
 
 ```{r}
 corrs = c()
@@ -65,14 +65,14 @@ paste("Class", which.max(corrs), "achieved the highest correlation with a coeffi
 
 ```
 
-c3) What is the alcohol content of the wine with the highest color intensity?
+c3\) What is the alcohol content of the wine with the highest color intensity?
 
 ```{r}
 paste("The alcohol content of the wine with the highest color intensity is", wine$Alcohol[which.max(wine$`Color intensity`)])
 
 ```
 
-c4) What percentage of wines had a higher content of proanthocyanins compare to ash?
+c4\) What percentage of wines had a higher content of proanthocyanins compare to ash?
 
 ```{r}
 higherPro <- nrow(wine[wine$Proanthocyanins > wine$Ash,])
@@ -81,42 +81,77 @@ paste0("Approximately ", round((higherPro/nrow(wine)*100),2), "% of the wines co
 
 ```
 
-d) Create a table identifying the average value of each variable, providing one row for the overall average, and one row per class with class averages. (This table does not need to be “fancy” but should clearly identify what each value represents.)
+d\)  Create a table identifying the average value of each variable, providing one row for the overall average, and one row per class with class averages. (This table does not need to be “fancy” but should clearly identify what each value represents.)
 
 ```{r}
-averages = c()
-
-averages <- sapply(df, mean,-1)
-
+overallMeans <- colMeans(wine[-1], na.rm = TRUE)
 
 wineSplit <- split(wine[-1],wine$Class)
-class_means <- sapply(df_split, colMeans(na.rm = TRUE)) #https://stackoverflow.com/questions/18879582/in-r-how-to-subset-data-frame-in-sapply
+classMeans <- sapply(wineSplit, function(x) colMeans(x,na.rm = TRUE))
+#https://stackoverflow.com/questions/18879582/in-r-how-to-subset-data-frame-in-sapply
 
+allMeans <- rbind(Overall = overallMeans, t(classMeans))
 
-
-averages[1] <- colMeans(wine) #total averages
-for (i in 1:3){
-  wineCopy <- wine[wine$Class == i,]
-  averages[i+1] <- colMeans(wineCopy) #compute averages for each class
-}
-
-as.table(averages)
+as.table(t(t(allMeans)))
 ```
+
+e\)  Carry out a series of t-tests to examine whether the level of phenols differs across the three classes. Present the R output and interpret the results. (You may use an existing R function to carry out the t-test, or for minor extra credit, manually write your own calculation of the t-test p-values.)
 
 ```{r}
-averages = c()
 
-averages <- sapply(df, mean,-1)
+#take phenols of each class
+phenolsClass_1 <- wine$`Total phenols`[wine$Class == 1]
+phenolsClass_2 <- wine$`Total phenols`[wine$Class == 2]
+phenolsClass_3 <- wine$`Total phenols`[wine$Class == 3]
+
+#perform pairwise t-tests (1v2, 1v3, 2v3)
+ttest_1_2 <- t.test(phenolsClass_1, phenolsClass_2)
+ttest_1_3 <- t.test(phenolsClass_1, phenolsClass_3)
+ttest_2_3 <- t.test(phenolsClass_2, phenolsClass_3)
+
+paste0("The t-test between classes 1 and 2 was ", ttest_1_2$p.value,4)
+paste0("The t-test between classes 1 and 3 was ", ttest_1_3$p.value)
+paste0("The t-test between classes 2 and 3 was ", ttest_2_3$p.value)
 
 
-dfSplit <- split(wine[-1],wine$Class)
-
-averages[1] <- colMeans(wine) #total averages
-for (i in 1:3){
-  wineCopy <- wine[wine$Class == i,]
-  averages[i+1] <- colMeans(wineCopy) #compute averages for each class
-}
-
-as.table(averages)
 ```
+
+With this output of p-values, we can reject the null hypothesis across all cases. All results are statistically significant, meaning that Total_phenols is an important variable to distinguish between pairs of classes.
+
+## Problem 2- Askamanager.org Data
+
+a\) Import Data and Rename Columns
+
+```{r}
+
+wine <- read.table('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/wine.data',sep=",")
+
+
+wineNames <- c("Class", "Alcohol","Malic acid","Ash","Alcalinity of ash", "Magnesium", "Total phenols", 
+  "Flavanoids","Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", 
+  "OD280/OD315 of diluted wines", "Proline")
+
+colnames(wine) <- wineNames
+
+
+```
+
+## Problem 1- Wine Data
+
+a\) Import Data and Rename Columns
+
+```{r}
+
+wine <- read.table('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/wine.data',sep=",")
+
+
+wineNames <- c("Class", "Alcohol","Malic acid","Ash","Alcalinity of ash", "Magnesium", "Total phenols", 
+  "Flavanoids","Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", 
+  "OD280/OD315 of diluted wines", "Proline")
+
+colnames(wine) <- wineNames
+
+
+```
+
 

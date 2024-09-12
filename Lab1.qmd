@@ -120,38 +120,123 @@ With this output of p-values, we can reject the null hypothesis across all cases
 
 ## Problem 2- Askamanager.org Data
 
-a\) Import Data and Rename Columns
+a\) Import the data into a data.frame in R
 
 ```{r}
 
-wine <- read.table('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/wine.data',sep=",")
+df <- read.csv('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/AskAManager.csv')
 
-
-wineNames <- c("Class", "Alcohol","Malic acid","Ash","Alcalinity of ash", "Magnesium", "Total phenols", 
-  "Flavanoids","Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", 
-  "OD280/OD315 of diluted wines", "Proline")
-
-colnames(wine) <- wineNames
+df$X = NULL #remove first column (junk) dataframe
 
 
 ```
 
-## Problem 1- Wine Data
+b\) Clean up the variable names. Simplify them.
+```{r}
+df$X = NULL #remove first column (junk) dataframe
 
-a\) Import Data and Rename Columns
+descriptors <- c("Timestamp","Age","Industry","Title","Additional Title Info",
+                 "Salary","Bonus Pay","Currency","Other Currency","Additional Income Info",
+                 "Country", "State", "City", "Total Experience", "Industry Experience", 
+                 "Education", "Gender", "Race")
+
+colnames(df) <- descriptors #replace column names with descriptions
+
+```
+
+
+c\) Restrict the data to those being paid in US dollars (USD). Show that it worked by confirming the number of observations before and after restricting the data.
+
 
 ```{r}
-
-wine <- read.table('/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/wine.data',sep=",")
-
-
-wineNames <- c("Class", "Alcohol","Malic acid","Ash","Alcalinity of ash", "Magnesium", "Total phenols", 
-  "Flavanoids","Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", 
-  "OD280/OD315 of diluted wines", "Proline")
-
-colnames(wine) <- wineNames
+lengthBefore <- nrow(df)
+df <- df[df$Currency == 'USD',] # Keep all entries of just USD
+lengthAfter <- nrow(df)
+paste0("The dataset shrunk from ", lengthBefore, " observations down to ",lengthAfter," observations.")
 
 
 ```
 
+d\) Assume no one starts working before age 18. Eliminate any rows for which their age, years of experience in their field, and years of experience total are impossible. Again, confirm the number of observations. (Hint: Making these variables factor may make your life easier.)
+
+
+```{r}
+lengthBefore <- lengthAfter
+
+df$MinimumExperience <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$`Total Experience`)) # found code on stackoverflow with RegEx to help
+df$MinimumAge <- as.numeric(gsub(".*?([0-9]+).*", "\\1", df$Age)) # found code on stackoverflow with RegEx to help
+df <- df[(df$MinimumAge - df$MinimumExperience) > 18,] #filter all rows where people started work before 18
+lengthAfter <- nrow(df)
+
+paste0("After removing invalid experience the dataset shrunk from ", lengthBefore, " observations down to ",lengthAfter," observations.")
+
+
+```
+
+e\) A lot of the incomes are likely false. Eliminate any rows with extremely low or extremely high salaries. I’ll leave the decision of what thresholds to use up to you; you could choose to eliminate only impossible values, or you could restrict the sample to eliminate the extreme values even if they are realistic (e.g. removing the billionaires or the folks making < $1,000 per year). You must justify your choice, along with either a cited source or an exploration the data, or some combination.
+
+
+```{r}
+lengthBefore <- lengthAfter
+
+# Will use IQR to remove outliers
+quartiles <- quantile(df$Salary, probs = c(0.25,0.75)) #only returns Q1 and Q3 as a list
+salaryRange <- IQR(df$Salary) #returns scalar
+
+lowerLimit <- quartiles[1] - (1.5 * salaryRange) # way below first quartile 
+upperLimit <- quartiles[2] + (1.5 * salaryRange) # way above third quartile
+
+df <- df[df$Salary > lowerLimit,] # keep all rows where salary is above lower limit
+df <- df[df$Salary < upperLimit,] # keep all rows where salary is below upper limit
+
+lengthAfter <- nrow(df)
+
+paste0("After removing income outliers the dataset shrunk from ", lengthBefore, " observations down to ",lengthAfter," observations.")
+
+```
+
+## Problem 3- Palindromic Numbers
+
+a\) Write function isPalindromic that checks if a given positive integer is a palindrome. Be sure to provide a reasonable error on an invalid input. Be sure to document your function (see instructions above).
+
+
+```{r}
+
+isPalindromic <- function(num){
+  num <- suppressWarnings(as.numeric(num)) # Try to convert input to numeric
+  
+  if(!is.na(num)){
+  num <- as.character(num) # convert to string
+  num <- strsplit(num, "")[[1]] # split number into list
+  n2 <- rev(num) #reverse list
+  status <- identical(num,n2) #see if reverse list equals original list
+  return(list(isPalindromic = status, reversed = n2))
+  } else {
+    stop("Input is non-numeric")
+  }
+}
+
+```
+
+b\) Create a function nextPalindrome that finds the next palindromic number strictly greater than the input. Be sure to provide a reasonable error on an invalid input.
+
+
+
+```{r}
+
+isPalindromic <- function(num){
+  num <- suppressWarnings(as.numeric(num)) # Try to convert input to numeric
+  
+  if(!is.na(num)){
+  num <- as.character(num) # convert to string
+  num <- strsplit(num, "")[[1]] # split number into list
+  n2 <- rev(num) #reverse list
+  status <- identical(num,n2) #see if reverse list equals original list
+  return(list(isPalindromic = status, reversed = n2))
+  } else {
+    stop("Input is non-numeric")
+  }
+}
+
+```
 

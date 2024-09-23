@@ -26,27 +26,27 @@ loopDiceGame <- function(nrolls){
 }
 
 set.seed(123)
-loopDiceGame(10)
+loopDiceGame(1200)
 ```
 
 -   Version 2: Implement this game using built-in R vectorized functions.
 
 ```{r}
 
-loopDiceGame <- function(nrolls){
+vectorizedDiceGame <- function(nrolls){
   wallet <- 0
-  for (i in 1:nrolls) {
-    roll <- sample(1:6,1)
-    if ((roll == 3) || (roll == 5)) {
-    wallet <- wallet + (2 * roll)
-    }
-    wallet <- wallet - 2
-  }
+  
+  allRolls <- sample(1:6,nrolls,replace=TRUE)
+  
+  wallet <- (allRolls == 3 | allRolls == 5) * 2 *allRolls
+
+  wallet <- sum(wallet) - (2*nrolls)
+  
   return(wallet)
 }
 
 set.seed(123)
-loopDiceGame(10)
+vectorizedDiceGame(1200)
 ```
 
 -   Version 3: Implement this by rolling all the dice into one and collapsing the die rolls into a single `table()`. (Hint: Be careful indexing the table - what happens if you make a table of a single dice roll? You may need to look to other resources for how to solve this.)

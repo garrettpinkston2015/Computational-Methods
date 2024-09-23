@@ -1,0 +1,63 @@
+---
+title: "HW2"
+author: "Garrett Pinkston"
+format: html
+editor: visual
+---
+
+## **Problem 1 - Dice Game**
+
+a\) Build the following versions
+
+-   Version 1: Implement this game using a loop.
+
+```{r}
+
+loopDiceGame <- function(nrolls){
+  wallet <- 0
+  for (i in 1:nrolls) {
+    roll <- sample(1:6,1)
+    if ((roll == 3) || (roll == 5)) {
+    wallet <- wallet + (2 * roll)
+    }
+    wallet <- wallet - 2
+  }
+  return(wallet)
+}
+
+set.seed(123)
+loopDiceGame(10)
+```
+
+-   Version 2: Implement this game using built-in R vectorized functions.
+
+```{r}
+
+loopDiceGame <- function(nrolls){
+  wallet <- 0
+  for (i in 1:nrolls) {
+    roll <- sample(1:6,1)
+    if ((roll == 3) || (roll == 5)) {
+    wallet <- wallet + (2 * roll)
+    }
+    wallet <- wallet - 2
+  }
+  return(wallet)
+}
+
+set.seed(123)
+loopDiceGame(10)
+```
+
+-   Version 3: Implement this by rolling all the dice into one and collapsing the die rolls into a single `table()`. (Hint: Be careful indexing the table - what happens if you make a table of a single dice roll? You may need to look to other resources for how to solve this.)
+
+-   Version 4: Implement this game by using one of the “`apply`” functions.
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

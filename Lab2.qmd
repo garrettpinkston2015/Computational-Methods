@@ -39,7 +39,6 @@ vectorizedDiceGame <- function(nrolls){
   allRolls <- sample(1:6,nrolls,replace=TRUE)
   
   wallet <- (allRolls == 3 | allRolls == 5) * 2 *allRolls
-
   wallet <- sum(wallet) - (2*nrolls)
   
   return(wallet)
@@ -51,12 +50,37 @@ vectorizedDiceGame(1200)
 
 -   Version 3: Implement this by rolling all the dice into one and collapsing the die rolls into a single `table()`. (Hint: Be careful indexing the table - what happens if you make a table of a single dice roll? You may need to look to other resources for how to solve this.)
 
+```{r}
+tableDiceGame <- function(nrolls){
+  wallet <- 0
+
+  allRolls <- sample(1:6,nrolls,replace=TRUE)
+  allRolls <- factor(allRolls,levels=1:6) #need to ensure all counts appear in table (even if num wasn't rolled)
+  
+  rollsTable <- table(allRolls)
+  
+  profitForThrees <- as.numeric(rollsTable["3"]) * 2 * 3 # numOccurences * payoff * numberProfit
+  profitForFives <- as.numeric(rollsTable["5"]) * 2 * 5 # numOccurences * payoff * numberProfit
+  
+  wallet <- profitForThrees + profitForFives
+  wallet <- wallet - (2 * nrolls)
+  
+  return(wallet)
+}
+set.seed(123)
+tableDiceGame(1200)
+```
+
 -   Version 4: Implement this game by using one of the “`apply`” functions.
+
+```{r}
+2 * 2
+```
+
 
 You can add options to executable code like this
 
 ```{r}
-#| echo: false
 2 * 2
 ```
 

@@ -5,6 +5,10 @@ format: pdf
 editor: visual
 ---
 
+## **Link to GitHub**
+
+github: https://github.com/garrettpinkston2015/Computational-Methods
+
 ## **Problem 1 - Dice Game**
 
 **a)** Build the following versions
@@ -264,7 +268,7 @@ applyDiceGame(3000)
 
 ```
 
-As we can see,  all of the outputs match, which ensures the functions work correctly.
+As we can see, all of the outputs match, which ensures the functions work correctly.
 
 **d)** Use the microbenchmark package to clearly demonstrate the speed of the implementations. Compare performance with a low input (1,000) and a large input (100,000). Discuss the results.
 
@@ -299,7 +303,7 @@ print(summary(largeBenchmark))
 
 ```
 
-As we can see, the outputs for the vectorized dice game performed significantly faster than all other functions examined. The median scores of vectorized were 2.65 and 29.9 milliseconds, and were nearly double the speed of the next fastest times. Next, table boasted impressive times of 4 and 66 milliseconds. After that, vapply succeeded in times of 28 and 271 milliseconds- significantly slower than the functions examined before. In dead last, the loop function performed in 223 and 2204 milliseconds, significantly slower than any other function. 
+As we can see, the outputs for the vectorized dice game performed significantly faster than all other functions examined. The median scores of vectorized were 2.65 and 29.9 milliseconds, and were nearly double the speed of the next fastest times. Next, table boasted impressive times of 4 and 66 milliseconds. After that, vapply succeeded in times of 28 and 271 milliseconds- significantly slower than the functions examined before. In dead last, the loop function performed in 223 and 2204 milliseconds, significantly slower than any other function.
 
 **e)** Do you think this is a fair game? Defend your decision with evidence based upon a Monte Carlo simulation.
 
@@ -353,12 +357,11 @@ hist(results)
 summary(results)
 ```
 
-Based on the outcome of the Monte Carlo Experiment, I would say that this is not a fair game (meaning not a zero-sum game) because the median of the distribution lies at 66. This means on average, you can expect to win about $66.72 if you roll the dice 100 times. If you were playing this game, you would gladly accept because of the high probability of making money. However, if you were the casino or institution hosting this game, you would likely lose money due to the high average payoffs.
+Based on the outcome of the Monte Carlo Experiment, I would say that this is not a fair game (meaning not a zero-sum game) because the median of the distribution lies at 66. This means on average, you can expect to win about \$66.72 if you roll the dice 100 times. If you were playing this game, you would gladly accept because of the high probability of making money. However, if you were the casino or institution hosting this game, you would likely lose money due to the high average payoffs.
 
 ## **Problem 2 - Linear Regression**
 
 a)  The names of the variables in this data are way too long. Rename the columns of the data to more reasonable lengths.
-
 
 ```{r}
 # Load data
@@ -460,7 +463,7 @@ ggplot(prediction_data, aes(x = Torque, y = PredictedMPG,
        color = "Horsepower")
 ```
 
-f) Calculate $\hat{\beta}$ from d. manually (without using lm) by first creating a proper design matrix, then using matrix algebra to estimate $\beta$. Confirm that you get the same result as lm did prior.
+f)  Calculate $\hat{\beta}$ from d. manually (without using lm) by first creating a proper design matrix, then using matrix algebra to estimate $\beta$. Confirm that you get the same result as lm did prior.
 
 ```{r}
 

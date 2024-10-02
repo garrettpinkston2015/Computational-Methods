@@ -1,0 +1,147 @@
+---
+title: "Statistics 506- Problem Set #3"
+author: "Garrett Pinkston"
+format: pdf
+editor: visual
+---
+
+## **Link to GitHub**
+
+github: https://github.com/garrettpinkston2015/Computational-Methods
+
+## **Problem 1 - Vision**
+
+**a)** Download the file VIX_D from this location, and determine how to read it into R. Then download the file DEMO_D from this location. Note that each page contains a link to a documentation file for that data set. Merge the two files to create a single data.frame, using the SEQN variable for merging. Keep only records which matched. Print out your total sample size, showing that it is now 6,980.
+
+```{r}
+
+# used haven library to read xpt files
+# https://haven.tidyverse.org/reference/read_xpt.html
+
+library(haven)
+
+vixData <- read_xpt("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/VIX_D.XPT")
+
+demoData <- read_xpt("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/DEMO_D.XPT")
+
+df <- merge(vix_data, demo_data, by = "SEQN", all = FALSE)
+
+# remove/identify null values
+df$VIQ220[df$VIQ220 == 1] = 0
+df$VIQ220[df$VIQ220 == 2] = 1
+df$VIQ220[df$VIQ220 == 9] = NA
+df$VIQ220[df$VIQ220 == "."] = NA
+
+
+# Checking the total rows here
+nsamples <- nrow(df)
+print(nsamples)
+
+
+
+```
+
+**b)** Without fitting any models, estimate the proportion of respondents within each 10-year age bracket (e.g. 0-9, 10-19, 20-29, etc) who wear glasses/contact lenses for distance vision. Produce a nice table with the results.
+
+```{r}
+
+library(dplyr)
+# RIDAGEYR is age variable
+# VIQ220 is glasses variable
+
+
+df <- df[!is.na(df$RIDAGEMN), ]
+df <- df[!is.na(df$VIQ220), ]
+
+# 10 year age groups
+df$age_group <- floor(df$RIDAGEYR / 10)
+df$age_group <- paste0(df$age_group * 10, "-", (df$age_group * 10 + 9))
+
+
+
+
+
+# Calculate the proportion of people who wear glasses/contact lenses by age group
+wear_glasses <- df %>%
+  group_by(age_group) %>%
+  summarize(
+    total = n(),
+    wear_glasses = sum(VIQ220 == 1, na.rm = TRUE),
+    proportion = wear_glasses / total
+  )
+
+library(knitr)
+kable(wear_glasses, 
+      caption = "Proportion of Respondents by Age Group",
+      col.names = c("Age Group", "Total Respondents", "Wear Glasses", "Proportion Wearing Glasses"),
+      digits = 3)  # You can adjust digits as needed
+
+
+```
+
+**c)** Fit three logistic regression models predicting whether a respondent wears glasses/contact lenses for distance vision. Predictors:
+
+**i)** age
+
+```{r}
+df$glasses <- ifelse(df$VIQ220 == 1, 1, 0)
+
+
+model1 <- glm(glasses ~ RIDAGEYR, data = df, family = binomial)
+
+
+
+summary(model1)
+
+```
+
+**ii)** age, race, gender
+
+```{r}
+
+model2 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1, data = df, family = binomial)
+
+summary(model2)
+
+
+```
+
+**iii)** age, race, gender, Poverty Income ratio
+
+```{r}
+
+model3 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1 + INDFMPIR, data = df, family = binomial)
+summary(model3)
+
+
+```
+
+Produce a table presenting the estimated odds ratios for the coefficients in each model, along with the sample size for the model, the pseudo- , and AIC values.
+
+**d)** From the third model from the previous part, test whether the odds of men and women being wears of glasess/contact lenses for distance vision differs. Test whether the proportion of wearers of glasses/contact lenses for distance vision differs between men and women. Include the results of the each test and their interpretation.
+
+## **Problem 2 - Sakila**
+
+Load the “sakila” database discussed in class into SQLite. It can be downloaded from https://github.com/bradleygrant/sakila-sqlite3.
+
+For these problems, do not use any of the tables whose names end in \_list.
+
+**a)** What is the oldest movie (earliest release year) in the database? Answer this with a single SQL query. For each of the following questions, solve them in two ways: First, use SQL query or queries to extract the appropriate table(s), then use regular R operations on those data.frames to answer the question. Second, use a single SQL query to answer the question.
+
+**b)** What genre of movie is the least common in the data, and how many movies are of this genre?
+
+**c)** Identify which country or countries have exactly 13 customers.
+
+## **Problem 3 - US Records**
+
+Download the “US - 500 Records” data from https://www.briandunning.com/sample-data/ and import it into R. This is entirely fake data - use it to answer the following questions.
+
+**a)** What proportion of email addresses are hosted at a domain with TLD “.com”? (in the email, “angrycat\@freemail.org”, “freemail.org” is the domain, and “.org” is the TLD (top-level domain).)
+
+**b)** What proportion of email addresses have at least one non alphanumeric character in them? (Excluding the required “\@” and “.” found in every email address.)
+
+**c)** What are the top 5 most common area codes amongst all phone numbers? (The area code is the first three digits of a standard 10-digit telephone number.)
+
+**d)** Produce a histogram of the log of the apartment numbers for all addresses. (You may assume any number at the end of the an address is an apartment number.)
+
+**e)** Benford’s law is an observation about the distribution of the leading digit of real numerical data. Examine whether the apartment numbers appear to follow Benford’s law. Do you think the apartment numbers would pass as real data?

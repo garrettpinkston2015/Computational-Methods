@@ -72,14 +72,27 @@ wear_glasses <- df %>%
 
 library(knitr)
 kable(wear_glasses, 
-      caption = "Proportion of Respondents by Age Group",
-      col.names = c("Age Group", "Total Respondents", "Wear Glasses", "Proportion Wearing Glasses"),
+      caption = "Respondents by Age Group",
+      col.names = c("Age Range", "Total Respondents", "Wear Glasses", "Proportion Wearing Glasses"),
       digits = 3)
 
 
 ```
 
 **c)** Fit three logistic regression models predicting whether a respondent wears glasses/contact lenses for distance vision. Predictors:
+
+```{r}
+# clean up
+
+df$RIAGENDR <- ifelse(df$RIAGENDR == 2, 1, 0)
+df$RIAGENDR[is.na(df$RIAGENDR)] <- NA
+
+df$RIDRETH1 <- factor(df$RIDRETH1, 
+                    levels = c(1, 2, 3, 4, 5), 
+                    labels = c("Mexican American", "Other Hispanic", 
+                               "Non-Hispanic White", "Non-Hispanic Black","Multi-racial"))
+
+```
 
 **i)** age
 
@@ -90,9 +103,6 @@ df$glasses <- ifelse(df$VIQ220 == 1, 1, 0)
 model1 <- glm(glasses ~ RIDAGEYR, data = df, family = binomial)
 
 
-
-summary(model1)
-
 ```
 
 **ii)** age, race, gender
@@ -100,8 +110,6 @@ summary(model1)
 ```{r}
 
 model2 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1, data = df, family = binomial)
-
-summary(model2)
 
 
 ```
@@ -111,16 +119,89 @@ summary(model2)
 ```{r}
 
 model3 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1 + INDFMPIR, data = df, family = binomial)
-summary(model3)
 
 
 ```
 
 Produce a table presenting the estimated odds ratios for the coefficients in each model, along with the sample size for the model, the pseudo- , and AIC values.
 
+```{r}
+get_model_stats <- function(model) {
+  or <- exp(coef(model)) # Odds ratios
+  n <- nobs(model)       # Sample size
+  pseudo_r2 <- 1 - model$deviance / model$null.deviance # Pseudo-R^2
+  aic <- AIC(model)      # AIC
+  list(or = or, n = n, pseudo_r2 = pseudo_r2, aic = aic)
+}
+
+model1Stats <- get_model_stats(model1)
+model2Stats <- get_model_stats(model2)
+model3Stats <- get_model_stats(model3)
+
+# Ensure the number of rows in each section is the same by repeating model name accordingly
+table <- data.frame(
+  Model = c(rep("M1", length(model1Stats$or)),
+            rep("M2", length(model2Stats$or)),
+            rep("M3", length(model3Stats$or))),
+  
+  Coefficient = c(names(model1Stats$or), names(model2Stats$or), names(model3Stats$or)),
+  
+  Odds_Ratios = c(model1Stats$or, model2Stats$or, model3Stats$or),
+  
+  Sample_Size = c(rep(model1Stats$n, length(model1Stats$or)),
+                  rep(model2Stats$n, length(model2Stats$or)),
+                  rep(model3Stats$n, length(model3Stats$or))),
+  
+  Pseudo_R2 = c(rep(model1Stats$pseudo_r2, length(model1Stats$or)),
+                rep(model2Stats$pseudo_r2, length(model2Stats$or)),
+                rep(model3Stats$pseudo_r2, length(model3Stats$or))),
+  
+  AIC = c(rep(model1Stats$aic, length(model1Stats$or)),
+          rep(model2Stats$aic, length(model2Stats$or)),
+          rep(model3Stats$aic, length(model3Stats$or)))
+)
+
+# Display the table
+print(table)
+```
+
+
+
 **d)** From the third model from the previous part, test whether the odds of men and women being wears of glasess/contact lenses for distance vision differs. Test whether the proportion of wearers of glasses/contact lenses for distance vision differs between men and women. Include the results of the each test and their interpretation.
 
 
+```{r}
+# Get the odds ratios and confidence intervals
+summary_m3 <- summary(model3)
+odds_ratios <- exp(coef(model3))
+conf_int <- exp(confint(model3))
+
+odds_table <- data.frame(
+  Coefficient = names(odds_ratios),
+  Odds_Ratio = odds_ratios,
+  `Conf. Int. Lower` = conf_int[,1],
+  `Conf. Int. Upper` = conf_int[,2]
+)
+
+print(odds_table)
+
+
+```
+```{r}
+library(margins)
+# Calculate marginal effects for gender (female)
+margins_m3 <- margins(model3, variables = "RIDAGEYR")
+summary(margins_m3)
+
+
+margins_by_gender <- margins(model3, at = list(RIAGENDR = c(0, 1)))
+print(margins_by_gender)
+
+
+gender_diff <- summary(margins(model3, at = list(RIAGENDR = c(0, 1))), 
+                       pwcompare = TRUE)
+print(gender_diff)
+```
 
 ## **Problem 2 - Sakila**
 
@@ -128,19 +209,141 @@ Load the “sakila” database discussed in class into SQLite. It can be downloa
 
 For these problems, do not use any of the tables whose names end in \_list.
 
+```{r}
+library(RSQLite)
+library(DBI)
+
+db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/sakila_master.db"
+
+# Connect to the SQLite database
+con <- dbConnect(RSQLite::SQLite(), dbname = db_path)
+
+
+```
 **a)** What is the oldest movie (earliest release year) in the database? Answer this with a single SQL query. For each of the following questions, solve them in two ways: First, use SQL query or queries to extract the appropriate table(s), then use regular R operations on those data.frames to answer the question. Second, use a single SQL query to answer the question.
+
+```{r}
+# SQL query to find the oldest movie year and the number of movies released in that year
+query <- "
+  SELECT release_year, COUNT(*) AS movie_count
+  FROM film
+  WHERE release_year IS NOT NULL
+  GROUP BY release_year
+  ORDER BY release_year ASC
+  LIMIT 1;
+"
+
+# Execute the query and get the result
+oldest_movie <- dbGetQuery(con, query)
+
+# Display the result
+print(oldest_movie)
+
+```
+
+For each of the following questions, solve them in two ways: First, use SQL query or queries to extract the appropriate table(s), then use regular R operations on those data.frames to answer the question. Second, use a single SQL query to answer the question.
+
+
 
 **b)** What genre of movie is the least common in the data, and how many movies are of this genre?
 
+```{r}
+#query and R
+query_genres <- "
+  SELECT c.name AS genre, COUNT(f.film_id) AS movie_count
+  FROM film f
+  JOIN film_category fc ON f.film_id = fc.film_id
+  JOIN category c ON fc.category_id = c.category_id
+  GROUP BY c.name;
+"
+# Execute the query
+genres_data <- dbGetQuery(con, query_genres)
+
+
+least_common_genre <- genres_data[which.min(genres_data$movie_count), ]
+
+# Display the result
+print(least_common_genre)
+
+```
+```{r}
+#single query
+query_least_common_genre <- "
+  SELECT c.name AS genre, COUNT(f.film_id) AS movie_count
+  FROM film f
+  JOIN film_category fc ON f.film_id = fc.film_id
+  JOIN category c ON fc.category_id = c.category_id
+  GROUP BY c.name
+  ORDER BY movie_count ASC
+  LIMIT 1;
+"
+# Execute the query
+least_common_genre <- dbGetQuery(con, query_least_common_genre)
+
+# Display the result
+print(least_common_genre)
+
+```
+
 **c)** Identify which country or countries have exactly 13 customers.
+
+```{r}
+# Extract the customer count per country
+query_countries <- "
+  SELECT co.country, COUNT(c.customer_id) AS customer_count
+  FROM customer c
+  JOIN address a ON c.address_id = a.address_id
+  JOIN city ci ON a.city_id = ci.city_id
+  JOIN country co ON ci.country_id = co.country_id
+  GROUP BY co.country;
+"
+# Execute the query
+countries_data <- dbGetQuery(con, query_countries)
+
+countries_with_13_customers <- countries_data[countries_data$customer_count == 13, ]
+
+# Display the result
+print(countries_with_13_customers)
+
+```
+```{r}
+query_countries_13_customers <- "
+  SELECT co.country, COUNT(c.customer_id) AS customer_count
+  FROM customer c
+  JOIN address a ON c.address_id = a.address_id
+  JOIN city ci ON a.city_id = ci.city_id
+  JOIN country co ON ci.country_id = co.country_id
+  GROUP BY co.country
+  HAVING customer_count = 13;
+"
+# Execute the query
+countries_with_13_customers <- dbGetQuery(con, query_countries_13_customers)
+
+# Display the result
+print(countries_with_13_customers)
+```
+
 
 ## **Problem 3 - US Records**
 
 Download the “US - 500 Records” data from https://www.briandunning.com/sample-data/ and import it into R. This is entirely fake data - use it to answer the following questions.
 
+```{r}
+df <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/us-500.csv")
+
+```
 **a)** What proportion of email addresses are hosted at a domain with TLD “.com”? (in the email, “angrycat\@freemail.org”, “freemail.org” is the domain, and “.org” is the TLD (top-level domain).)
 
+```{r}
+
+length(df$email[grepl("net$", df$email)])/nrow(df)
+
+```
 **b)** What proportion of email addresses have at least one non alphanumeric character in them? (Excluding the required “\@” and “.” found in every email address.)
+
+```{r}
+
+```
 
 **c)** What are the top 5 most common area codes amongst all phone numbers? (The area code is the first three digits of a standard 10-digit telephone number.)
 

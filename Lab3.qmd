@@ -342,11 +342,64 @@ length(df$email[grepl("net$", df$email)])/nrow(df)
 **b)** What proportion of email addresses have at least one non alphanumeric character in them? (Excluding the required “\@” and “.” found in every email address.)
 
 ```{r}
+emails <- strsplit(df$email, "@")
 
+# Extract the usernames (portion before @)
+usernames <- sapply(emails, "[[", 1)
+
+# Detect non-alphanumeric characters in the usernames
+username_non_alphanumeric <- grepl("[^a-zA-Z0-9]", usernames)
+
+# Extract the domains (portion after @)
+domains <- sapply(emails, "[[", 2)
+
+# Remove the top-level domain (TLD), keeping only the domain name
+domains <- gsub("\\.[a-z]{2,}$", "", domains)
+
+# Detect non-alphanumeric characters in the domains
+domain_non_alphanumeric <- grepl("[^a-zA-Z0-9]", domains)
+
+proportion_non_alphanumeric <- mean(username_non_alphanumeric | domain_non_alphanumeric)
+
+# Output the result
+proportion_non_alphanumeric
 ```
 
 **c)** What are the top 5 most common area codes amongst all phone numbers? (The area code is the first three digits of a standard 10-digit telephone number.)
 
+```{r}
+phone_numbers <- df$phone1
+
+# take first 3 digs of phone numebrs 
+area_codes <- substr(phone_numbers, 1, 3)
+
+
+area_code_counts <- table(area_codes)
+top_5_area_codes <- sort(area_code_counts, decreasing = TRUE)[1:5]
+print(top_5_area_codes)
+
+```
+
 **d)** Produce a histogram of the log of the apartment numbers for all addresses. (You may assume any number at the end of the an address is an apartment number.)
+
+```{r}
+library(ggplot2)
+
+apartments <- data$address[grepl("[0-9]+$", data$address)]
+
+# Extract the apartment number by splitting the addresses and taking the last element
+numbers <- sapply(strsplit(apartments, " "), function(x) x[length(x)])
+
+# Remove any "#" symbols and convert the numbers to numeric
+numbers <- as.numeric(gsub("#", "", numbers))
+
+# Plot the histogram of the log of the apartment numbers
+hist(log(numbers), 
+     main = "Histogram of Log of Apartment Numbers", 
+     xlab = "Log of Apartment Number", 
+     col = "lightblue", 
+     border = "black")
+
+```
 
 **e)** Benford’s law is an observation about the distribution of the leading digit of real numerical data. Examine whether the apartment numbers appear to follow Benford’s law. Do you think the apartment numbers would pass as real data?

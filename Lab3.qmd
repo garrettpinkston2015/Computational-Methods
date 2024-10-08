@@ -49,7 +49,7 @@ library(dplyr)
 # RIDAGEYR is age variable
 # VIQ220 is glasses variable
 
-
+# drop all isnans 
 df <- df[!is.na(df$RIDAGEMN), ]
 df <- df[!is.na(df$VIQ220), ]
 
@@ -74,7 +74,7 @@ library(knitr)
 kable(wear_glasses, 
       caption = "Proportion of Respondents by Age Group",
       col.names = c("Age Group", "Total Respondents", "Wear Glasses", "Proportion Wearing Glasses"),
-      digits = 3)  # You can adjust digits as needed
+      digits = 3)
 
 
 ```
@@ -119,6 +119,8 @@ summary(model3)
 Produce a table presenting the estimated odds ratios for the coefficients in each model, along with the sample size for the model, the pseudo- , and AIC values.
 
 **d)** From the third model from the previous part, test whether the odds of men and women being wears of glasess/contact lenses for distance vision differs. Test whether the proportion of wearers of glasses/contact lenses for distance vision differs between men and women. Include the results of the each test and their interpretation.
+
+
 
 ## **Problem 2 - Sakila**
 

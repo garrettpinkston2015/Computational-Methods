@@ -343,21 +343,17 @@ length(df$email[grepl("net$", df$email)])/nrow(df)
 
 ```{r}
 emails <- strsplit(df$email, "@")
-
-# Extract the usernames (portion before @)
 usernames <- sapply(emails, "[[", 1)
 
-# Detect non-alphanumeric characters in the usernames
-username_non_alphanumeric <- grepl("[^a-zA-Z0-9]", usernames)
 
-# Extract the domains (portion after @)
+
+username_non_alphanumeric <- grepl("[^a-zA-Z0-9]", usernames)
 domains <- sapply(emails, "[[", 2)
 
-# Remove the top-level domain (TLD), keeping only the domain name
-domains <- gsub("\\.[a-z]{2,}$", "", domains)
 
-# Detect non-alphanumeric characters in the domains
+domains <- gsub("\\.[a-z]{2,}$", "", domains)
 domain_non_alphanumeric <- grepl("[^a-zA-Z0-9]", domains)
+
 
 proportion_non_alphanumeric <- mean(username_non_alphanumeric | domain_non_alphanumeric)
 
@@ -385,21 +381,21 @@ print(top_5_area_codes)
 ```{r}
 library(ggplot2)
 
-apartments <- data$address[grepl("[0-9]+$", data$address)]
+apartments <- df$address[grepl("[0-9]+$", df$address)]
 
-# Extract the apartment number by splitting the addresses and taking the last element
 numbers <- sapply(strsplit(apartments, " "), function(x) x[length(x)])
-
-# Remove any "#" symbols and convert the numbers to numeric
 numbers <- as.numeric(gsub("#", "", numbers))
 
-# Plot the histogram of the log of the apartment numbers
 hist(log(numbers), 
-     main = "Histogram of Log of Apartment Numbers", 
-     xlab = "Log of Apartment Number", 
-     col = "lightblue", 
-     border = "black")
+     main = "Log Histogram of Apartment Numbers", 
+     xlab = "Log of Apartment Number")
 
 ```
 
 **e)** Benford’s law is an observation about the distribution of the leading digit of real numerical data. Examine whether the apartment numbers appear to follow Benford’s law. Do you think the apartment numbers would pass as real data?
+
+```{r}
+table(substr(numbers, 1, 1))
+```
+
+Based on the output of table(substr(numbers, 1, 1)), the frequencies of the leading digits appear  uniform rather than following the expected decreasing distribution from Benford’s Law. Benford's Law states that lower digits should appear more frequently than higher digits. The fact that this data is roughly uniform indicates that this data does not represent naturally occurring patterns and suggests that it is synthetic.

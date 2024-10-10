@@ -20,15 +20,20 @@ github: https://github.com/garrettpinkston2015/Computational-Methods
 
 library(haven)
 
+#read in vix data
 vixData <- read_xpt("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/VIX_D.XPT")
 
+#read in demo data
 demoData <- read_xpt("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/DEMO_D.XPT")
 
-df <- merge(vix_data, demo_data, by = "SEQN", all = FALSE)
+#merge both dataframes
+df <- merge(vixData, demoData, by = "SEQN", all = FALSE)
 
-# remove/identify null values
+# remap categorical coding
 df$VIQ220[df$VIQ220 == 1] = 0
 df$VIQ220[df$VIQ220 == 2] = 1
+
+#if data is 9 or . we can assume it is NaN
 df$VIQ220[df$VIQ220 == 9] = NA
 df$VIQ220[df$VIQ220 == "."] = NA
 
@@ -36,8 +41,6 @@ df$VIQ220[df$VIQ220 == "."] = NA
 # Checking the total rows here
 nsamples <- nrow(df)
 print(nsamples)
-
-
 
 ```
 
@@ -49,31 +52,52 @@ library(dplyr)
 # RIDAGEYR is age variable
 # VIQ220 is glasses variable
 
-# drop all isnans 
+# drop all isnans in data for RIDAGEYR (age) (identified earlier) 
 df <- df[!is.na(df$RIDAGEMN), ]
+
+# drop all isnans in data for VIQ220 (glasses) (identified earlier) 
 df <- df[!is.na(df$VIQ220), ]
 
-# 10 year age groups
+# create 10 year age groups
 df$age_group <- floor(df$RIDAGEYR / 10)
+
+# define age group as the range + 9
 df$age_group <- paste0(df$age_group * 10, "-", (df$age_group * 10 + 9))
 
 
 
 
 
-# Calculate the proportion of people who wear glasses/contact lenses by age group
+# Calculate proportion of people who wear glasses/contacts by age group
 wear_glasses <- df %>%
+  # group everyone together by age group. For every age group do the following:
   group_by(age_group) %>%
+  # return the following in summary format
   summarize(
+    # total is the number of rows
     total = n(),
+    
+    # glasses wearers is just summing over all instances where 1's wear glasses
     wear_glasses = sum(VIQ220 == 1, na.rm = TRUE),
+    
+    #proportion is the number of glass wearers / total people
     proportion = wear_glasses / total
   )
 
+#using knitr library for output
 library(knitr)
-kable(wear_glasses, 
+
+#using kable function to output following in a "nice" table
+kable(wear_glasses,
+      
+      # set caption for graph here
       caption = "Respondents by Age Group",
-      col.names = c("Age Range", "Total Respondents", "Wear Glasses", "Proportion Wearing Glasses"),
+      
+      #specify names for columns here
+      col.names = c("Age Range", "Total Respondents", "Wear Glasses", 
+                    "Proportion Wearing Glasses"),
+      
+      #specify precision here
       digits = 3)
 
 
@@ -82,24 +106,31 @@ kable(wear_glasses,
 **c)** Fit three logistic regression models predicting whether a respondent wears glasses/contact lenses for distance vision. Predictors:
 
 ```{r}
-# clean up
 
+# clean up RIAGENDER column and remap 2's to 1's
 df$RIAGENDR <- ifelse(df$RIAGENDR == 2, 1, 0)
+
+#drop all NaNs in RIAGENDER column
 df$RIAGENDR[is.na(df$RIAGENDR)] <- NA
 
+
+# make RIDRETH (race) factor into 5 labels (better for description)
 df$RIDRETH1 <- factor(df$RIDRETH1, 
                     levels = c(1, 2, 3, 4, 5), 
                     labels = c("Mexican American", "Other Hispanic", 
-                               "Non-Hispanic White", "Non-Hispanic Black","Multi-racial"))
+                               "Non-Hispanic White", "Non-Hispanic Black",
+                               "Multi-racial"))
 
 ```
 
 **i)** age
 
 ```{r}
+
+# double check glasses either is 1 or 0
 df$glasses <- ifelse(df$VIQ220 == 1, 1, 0)
 
-
+# fit model 1
 model1 <- glm(glasses ~ RIDAGEYR, data = df, family = binomial)
 
 
@@ -108,7 +139,7 @@ model1 <- glm(glasses ~ RIDAGEYR, data = df, family = binomial)
 **ii)** age, race, gender
 
 ```{r}
-
+# add in race and gender into model 2, save into new output
 model2 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1, data = df, family = binomial)
 
 
@@ -118,6 +149,8 @@ model2 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1, data = df, family = bino
 
 ```{r}
 
+# add in race, gender and PIR into model 3, save into new output
+
 model3 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1 + INDFMPIR, data = df, family = binomial)
 
 
@@ -126,82 +159,136 @@ model3 <- glm(glasses ~ RIDAGEYR + RIAGENDR + RIDRETH1 + INDFMPIR, data = df, fa
 Produce a table presenting the estimated odds ratios for the coefficients in each model, along with the sample size for the model, the pseudo- , and AIC values.
 
 ```{r}
+#' Get Model Statistics
+#'
+#' This function extracts key statistics from a fitted logistic regression model.
+#' It returns the odds ratios, sample size, pseudo-R^2, and AIC for the model.
+#'
+#' @param model A fitted logistic regression model object (e.g., from `glm` 
+#' # with family `binomial`).
+#'
+#' @return A list containing the following elements:
+#' \describe{
+#'   \item{or}{Odds ratios (exponentiated coefficients) from the logistic 
+#'   regression model.}
+#'   
+#'   \item{n}{Sample size (number of observations) used in the model.}
+#'   
+#'   \item{pseudo_r2}{Pseudo-R^2, which is a measure of goodness-of-fit for 
+#'   logistic regression models.}
+#'   
+#'   \item{aic}{Akaike Information Criterion (AIC), a measure of the relative 
+#'   quality of the model.}
+#' }
+#' @export
+#'
+#' @examples
+#' # Example using a logistic regression model
+#' model <- glm(outcome ~ predictor1 + predictor2, family = binomial, 
+#' data = your_data)
+#' 
+#' stats <- get_model_stats(model)
+#' print(stats)
 get_model_stats <- function(model) {
+  # take odds ratio first as the exponentiated coefficients from logistic 
+  # regression model
   or <- exp(coef(model)) # Odds ratios
+  
+  # take sample size as the number of observations fed into the model
   n <- nobs(model)       # Sample size
+  
+  # Compute  pseudo-R^2 by subtracting the ratio of the model's deviance to the 
+  # null deviance from 1.
+
   pseudo_r2 <- 1 - model$deviance / model$null.deviance # Pseudo-R^2
+  
+  #calculate AIC from the given model 
   aic <- AIC(model)      # AIC
+  
+  # return a list of the odds ratio, sample size, pseudor2, aic
   list(or = or, n = n, pseudo_r2 = pseudo_r2, aic = aic)
 }
+```
 
+```{r}
+# call this function across all models
 model1Stats <- get_model_stats(model1)
 model2Stats <- get_model_stats(model2)
 model3Stats <- get_model_stats(model3)
 
-# Ensure the number of rows in each section is the same by repeating model name accordingly
+# Ensure the number of rows in each section is the same by repeating 
+# model name accordingly
 table <- data.frame(
+  # Create the 'Model' column by repeating "M1", "M2", and "M3" for the 
+  # length of each model's odds ratios
   Model = c(rep("M1", length(model1Stats$or)),
             rep("M2", length(model2Stats$or)),
             rep("M3", length(model3Stats$or))),
   
+  # Create the 'Coefficient' column using the names of the odds ratios for each model
   Coefficient = c(names(model1Stats$or), names(model2Stats$or), names(model3Stats$or)),
   
+  # Create the 'Odds_Ratios' column by combining odds ratios from all three models
   Odds_Ratios = c(model1Stats$or, model2Stats$or, model3Stats$or),
   
+  # Create the 'Sample_Size' column by repeating each model's sample size 
+  # for the length of its odds ratios
   Sample_Size = c(rep(model1Stats$n, length(model1Stats$or)),
                   rep(model2Stats$n, length(model2Stats$or)),
                   rep(model3Stats$n, length(model3Stats$or))),
   
+  # Create the 'Pseudo_R2' column by repeating each model's pseudo-R^2 
+  # for the length of its odds ratios
   Pseudo_R2 = c(rep(model1Stats$pseudo_r2, length(model1Stats$or)),
                 rep(model2Stats$pseudo_r2, length(model2Stats$or)),
                 rep(model3Stats$pseudo_r2, length(model3Stats$or))),
   
+  # Create the 'AIC' column by repeating each model's AIC 
+  # for the length of its odds ratios
   AIC = c(rep(model1Stats$aic, length(model1Stats$or)),
           rep(model2Stats$aic, length(model2Stats$or)),
           rep(model3Stats$aic, length(model3Stats$or)))
 )
 
-# Display the table
+# print the ouput 
 print(table)
+
 ```
 
 
 
 **d)** From the third model from the previous part, test whether the odds of men and women being wears of glasess/contact lenses for distance vision differs. Test whether the proportion of wearers of glasses/contact lenses for distance vision differs between men and women. Include the results of the each test and their interpretation.
 
-
 ```{r}
-# Get the odds ratios and confidence intervals
-summary_m3 <- summary(model3)
-odds_ratios <- exp(coef(model3))
-conf_int <- exp(confint(model3))
 
-odds_table <- data.frame(
-  Coefficient = names(odds_ratios),
-  Odds_Ratio = odds_ratios,
-  `Conf. Int. Lower` = conf_int[,1],
-  `Conf. Int. Upper` = conf_int[,2]
-)
-
-print(odds_table)
-
-
+# Summarize the model to get the coefficient for gender (RIAGENDR)
+summary(model3)
 ```
 ```{r}
-library(margins)
-# Calculate marginal effects for gender (female)
-margins_m3 <- margins(model3, variables = "RIDAGEYR")
-summary(margins_m3)
+# Extract the odds ratio for gender (exponentiating the coefficient from model)
+odds_ratio_gender <- exp(coef(model3)["RIAGENDR"])
 
+# Print the odds ratio
+print(paste("The odds ratio for gender (men compared to women) is:", odds_ratio_gender))
 
-margins_by_gender <- margins(model3, at = list(RIAGENDR = c(0, 1)))
-print(margins_by_gender)
-
-
-gender_diff <- summary(margins(model3, at = list(RIAGENDR = c(0, 1))), 
-                       pwcompare = TRUE)
-print(gender_diff)
 ```
+
+Based on the summary output from the model, we can tell that the p-value of the is less than 2e^-16, meaning it is a very significant predictor for the model. Therefore, we can reject the null hypothesis that the odds of wearing glasses/contact lenses are the same for men and women. The odds ratio tell us the factor by which the odds change for men compared to women.
+
+
+```{r}
+# Create contingency table for gender and glasses/contact lenses usage
+table_gender_glasses <- table(df$RIAGENDR, df$glasses)
+
+# Perform a chi-squared test for men and women
+chi_square_test <- chisq.test(table_gender_glasses)
+
+# print the results of the test
+print(chi_square_test)
+
+```
+The chi-square test has compared the proportions of glasses/contact lenses wearers between men and women. Because the p-value from the chi-square test is less than 0.05, we can reject the null hypothesis and confidently conclude that the proportion of glasses/contact lenses wearers is different for men and women.
+
 
 ## **Problem 2 - Sakila**
 
@@ -213,6 +300,7 @@ For these problems, do not use any of the tables whose names end in \_list.
 library(RSQLite)
 library(DBI)
 
+#specify path of the database
 db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/sakila_master.db"
 
 # Connect to the SQLite database
@@ -220,16 +308,27 @@ con <- dbConnect(RSQLite::SQLite(), dbname = db_path)
 
 
 ```
-**a)** What is the oldest movie (earliest release year) in the database? Answer this with a single SQL query. For each of the following questions, solve them in two ways: First, use SQL query or queries to extract the appropriate table(s), then use regular R operations on those data.frames to answer the question. Second, use a single SQL query to answer the question.
+
+**a)** What is the oldest movie (earliest release year) in the database? Answer this with a single SQL query.
 
 ```{r}
-# SQL query to find the oldest movie year and the number of movies released in that year
+# SQL query to find the oldest movie year and the number of movies released 
+# in that year
 query <- "
+  -- Select the release year and count the number of movies for each year
   SELECT release_year, COUNT(*) AS movie_count
   FROM film
+  
+  -- Ensure only rows where release_year is not NULL are included
   WHERE release_year IS NOT NULL
+  
+  -- Group the data by release year to count movies per year
   GROUP BY release_year
+  
+  -- Sort the results by release year in ascending order
   ORDER BY release_year ASC
+  
+  -- Limit the output to the first row (i.e., the earliest release year)
   LIMIT 1;
 "
 
@@ -248,24 +347,35 @@ For each of the following questions, solve them in two ways: First, use SQL quer
 **b)** What genre of movie is the least common in the data, and how many movies are of this genre?
 
 ```{r}
-#query and R
+# Define the SQL query to get the movie count for each genre
 query_genres <- "
+  -- Select the genre name from the category table
   SELECT c.name AS genre, COUNT(f.film_id) AS movie_count
+  
+  -- From the film table (f), join the film_category table (fc) 
+  -- to connect films to their categories
   FROM film f
   JOIN film_category fc ON f.film_id = fc.film_id
+  
+  -- Join the category table (c) to access the genre names
   JOIN category c ON fc.category_id = c.category_id
+  
+  -- Group the results by genre name to count movies for each genre
   GROUP BY c.name;
 "
-# Execute the query
+
+# Execute the SQL query and store the result in the genres_data dataframe
 genres_data <- dbGetQuery(con, query_genres)
 
-
+# Find the row with the least common genre by identifying the minimum movie count
 least_common_genre <- genres_data[which.min(genres_data$movie_count), ]
 
-# Display the result
+# Display the least common genre and its movie count
 print(least_common_genre)
 
 ```
+
+
 ```{r}
 #single query
 query_least_common_genre <- "
@@ -288,38 +398,64 @@ print(least_common_genre)
 **c)** Identify which country or countries have exactly 13 customers.
 
 ```{r}
-# Extract the customer count per country
+# Define the SQL query to count the number of customers in each country
 query_countries <- "
+  -- Select the country name and count the number of customers in each country
   SELECT co.country, COUNT(c.customer_id) AS customer_count
+  
+  -- From the customer table (c), join the address table (a) using address_id 
+  -- to associate customers with their addresses
   FROM customer c
   JOIN address a ON c.address_id = a.address_id
+  
+  -- Join the city table (ci) using city_id to connect addresses to cities
   JOIN city ci ON a.city_id = ci.city_id
+  
+  -- Join the country table (co) using country_id to connect cities to countries
   JOIN country co ON ci.country_id = co.country_id
+  
+  -- Group the results by country to count the number of customers per country
   GROUP BY co.country;
 "
-# Execute the query
+
+# Execute the SQL query and store the result in the countries_data dataframe
 countries_data <- dbGetQuery(con, query_countries)
 
+# Filter the dataframe to find the country or countries with exactly 13 customers
 countries_with_13_customers <- countries_data[countries_data$customer_count == 13, ]
 
-# Display the result
+# Display the country or countries with exactly 13 customers
 print(countries_with_13_customers)
 
 ```
 ```{r}
 query_countries_13_customers <- "
+  -- Select the country name and count the number of customers per country
   SELECT co.country, COUNT(c.customer_id) AS customer_count
+  
+  -- From the customer table (c), join the address table (a) using address_id 
+  -- to associate customers with their addresses
   FROM customer c
   JOIN address a ON c.address_id = a.address_id
+  
+  -- Join the city table (ci) using city_id to connect addresses to cities
   JOIN city ci ON a.city_id = ci.city_id
+  
+  -- Join the country table (co) using country_id to connect cities to countries
   JOIN country co ON ci.country_id = co.country_id
+  
+  -- Group the results by country to count the number of customers per country
   GROUP BY co.country
+  
+  -- Use HAVING to filter the grouped results to only include countries 
+  -- with exactly 13 customers
   HAVING customer_count = 13;
 "
-# Execute the query
+
+# Execute the SQL query and store the result into dataframe
 countries_with_13_customers <- dbGetQuery(con, query_countries_13_customers)
 
-# Display the result
+# Display the country or countries that have exactly 13 customers
 print(countries_with_13_customers)
 ```
 
@@ -329,49 +465,67 @@ print(countries_with_13_customers)
 Download the “US - 500 Records” data from https://www.briandunning.com/sample-data/ and import it into R. This is entirely fake data - use it to answer the following questions.
 
 ```{r}
+# read in data
 df <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/us-500.csv")
-
 ```
+
 **a)** What proportion of email addresses are hosted at a domain with TLD “.com”? (in the email, “angrycat\@freemail.org”, “freemail.org” is the domain, and “.org” is the TLD (top-level domain).)
 
 ```{r}
-
+# Calculate the proportion of emails ending with "net" in the 'email' column of 'df'
 length(df$email[grepl("net$", df$email)])/nrow(df)
 
 ```
+
 **b)** What proportion of email addresses have at least one non alphanumeric character in them? (Excluding the required “\@” and “.” found in every email address.)
 
 ```{r}
+# split email addresses into two parts (splitting at "@")
 emails <- strsplit(df$email, "@")
+
+# Extract the username part of each email (part before "@")
 usernames <- sapply(emails, "[[", 1)
 
-
-
+# Check if each username contains any non-alphanumeric character 
+# (excluding letters and digits)
 username_non_alphanumeric <- grepl("[^a-zA-Z0-9]", usernames)
+
+
+# Extract the domain part of each email (the part after "@")
 domains <- sapply(emails, "[[", 2)
 
-
+# remove the organization (e.g., ".com", ".net") from the domain part
 domains <- gsub("\\.[a-z]{2,}$", "", domains)
+
+# check whether each domain (excluding the top-level domain) contains any 
+# non-alphanumeric character
 domain_non_alphanumeric <- grepl("[^a-zA-Z0-9]", domains)
 
+# Calculate the proportion of emails where either the username or domain 
+# has a non-alphanumeric character
 
 proportion_non_alphanumeric <- mean(username_non_alphanumeric | domain_non_alphanumeric)
 
-# Output the result
+# Output result
 proportion_non_alphanumeric
 ```
 
 **c)** What are the top 5 most common area codes amongst all phone numbers? (The area code is the first three digits of a standard 10-digit telephone number.)
 
 ```{r}
+# Extract the 'phone1' column from the dataframe (phone numbers)
 phone_numbers <- df$phone1
 
-# take first 3 digs of phone numebrs 
+# Extract the first 3 digits of each phone number (area codes)
 area_codes <- substr(phone_numbers, 1, 3)
 
-
+# Count the frequency of each area code
 area_code_counts <- table(area_codes)
+
+# Sort the area code counts in decreasing order and select the top 5 most common area codes
 top_5_area_codes <- sort(area_code_counts, decreasing = TRUE)[1:5]
+
+# Print the top 5 area codes and their counts
 print(top_5_area_codes)
 
 ```
@@ -379,13 +533,20 @@ print(top_5_area_codes)
 **d)** Produce a histogram of the log of the apartment numbers for all addresses. (You may assume any number at the end of the an address is an apartment number.)
 
 ```{r}
+# load ggplot2 for visualization
 library(ggplot2)
 
+# Extract addresses that end with a number (typically apartment numbers)
 apartments <- df$address[grepl("[0-9]+$", df$address)]
 
+# split addresses into individual words and extract the apartment number
 numbers <- sapply(strsplit(apartments, " "), function(x) x[length(x)])
+
+# Remove any '#' characters (if present) from the apartment numbers 
+# and convert them to numeric values
 numbers <- as.numeric(gsub("#", "", numbers))
 
+# Make a histogram of the log-transformed apartment numbers
 hist(log(numbers), 
      main = "Log Histogram of Apartment Numbers", 
      xlab = "Log of Apartment Number")
@@ -395,6 +556,7 @@ hist(log(numbers),
 **e)** Benford’s law is an observation about the distribution of the leading digit of real numerical data. Examine whether the apartment numbers appear to follow Benford’s law. Do you think the apartment numbers would pass as real data?
 
 ```{r}
+#print table output of the numbers
 table(substr(numbers, 1, 1))
 ```
 

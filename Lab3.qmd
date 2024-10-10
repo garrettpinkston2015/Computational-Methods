@@ -472,8 +472,8 @@ df <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/us-500.csv"
 **a)** What proportion of email addresses are hosted at a domain with TLD “.com”? (in the email, “angrycat\@freemail.org”, “freemail.org” is the domain, and “.org” is the TLD (top-level domain).)
 
 ```{r}
-# Calculate the proportion of emails ending with "net" in the 'email' column of 'df'
-length(df$email[grepl("net$", df$email)])/nrow(df)
+# Calculate the proportion of emails ending with "com" in the 'email' column of 'df'
+length(df$email[grepl("com$", df$email)])/nrow(df)
 
 ```
 

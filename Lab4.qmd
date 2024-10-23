@@ -1,0 +1,55 @@
+---
+title: "Statistics 506- Problem Set #4"
+author: "Garrett Pinkston"
+format: pdf
+editor: visual
+---
+
+## **Link to GitHub**
+
+github: https://github.com/garrettpinkston2015/Computational-Methods
+
+## **Problem 1 - Tidyverse**
+
+Install and load the package nycflights13.
+```{r}
+install.packages("nycflights13")
+library(nycflights13)
+```
+
+**a)** Generate a table (which can just be a nicely printed tibble) reporting the mean and median departure delay per airport. Generate a second table (which again can be a nicely printed tibble) reporting the mean and median arrival delay per airport. Exclude any destination with under 10 flights. Do this exclusion through code, not manually.
+
+
+Additionally,
+
+- Order both tables in descending mean delay.
+- Both tables should use the airport names not the airport codes.
+- Both tables should print all rows.
+
+**b)** How many flights did the aircraft model with the fastest average speed take? Produce a tibble with 1 row, and entires for the model, average speed (in MPH) and number of flights.
+
+
+## **Problem 2 - get_temp()**
+
+Load the Chicago NNMAPS data we used in the visualization lectures. Write a function get_temp() that allows a user to request the average temperature for a given month. The arguments should be:
+
+- month: Month, either a numeric 1-12 or a string.
+- year: A numeric year.
+- data: The data set to obtain data from.
+- celsius: Logically indicating whther the results should be in celsius. Default FALSE.
+- average_fn: A function with which to compute the mean. Default is mean.
+- The output should be a numeric vector of length 1. The code inside the function should, as with the rest of this    problem, use the tidyverse. Be sure to sanitize the input.
+
+Prove your code works by evaluating the following. Your code should produce the result, or a reasonable error message.
+
+
+## **Problem 3 - Visualization**
+
+- Is there a change in the sales price in USD over time?
+- Does the distribution of genre of sales across years appear to change?
+- How does the genre affect the change in sales price over time?
+
+
+
+
+

@@ -13,8 +13,8 @@ github: https://github.com/garrettpinkston2015/Computational-Methods
 
 Install and load the package nycflights13.
 ```{r}
-install.packages("nycflights13")
 library(nycflights13)
+nycflights13::airports
 ```
 
 **a)** Generate a table (which can just be a nicely printed tibble) reporting the mean and median departure delay per airport. Generate a second table (which again can be a nicely printed tibble) reporting the mean and median arrival delay per airport. Exclude any destination with under 10 flights. Do this exclusion through code, not manually.
@@ -30,6 +30,11 @@ depStats <- flights %>%
     median_dep_delay = median(dep_delay, na.rm = TRUE)
   ) %>%
   ungroup() %>%
+  left_join(airports, by = c("dest" = "faa")) %>% 
+  select(name, mean_dep_delay, median_dep_delay) %>%
+  arrange(desc(mean_dep_delay))
+
+print(depStats)
 
 ```
 

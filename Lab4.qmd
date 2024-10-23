@@ -19,6 +19,19 @@ library(nycflights13)
 
 **a)** Generate a table (which can just be a nicely printed tibble) reporting the mean and median departure delay per airport. Generate a second table (which again can be a nicely printed tibble) reporting the mean and median arrival delay per airport. Exclude any destination with under 10 flights. Do this exclusion through code, not manually.
 
+```{r}
+library(dplyr)
+
+depStats <- flights %>%
+  group_by(dest) %>%
+  filter(n() >= 10) %>%  
+  summarise(
+    mean_dep_delay = mean(dep_delay, na.rm = TRUE),
+    median_dep_delay = median(dep_delay, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+
+```
 
 Additionally,
 

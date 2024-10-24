@@ -255,8 +255,6 @@ print(table)
 
 ```
 
-
-
 **d)** From the third model from the previous part, test whether the odds of men and women being wears of glasess/contact lenses for distance vision differs. Test whether the proportion of wearers of glasses/contact lenses for distance vision differs between men and women. Include the results of the each test and their interpretation.
 
 ```{r}
@@ -264,6 +262,7 @@ print(table)
 # Summarize the model to get the coefficient for gender (RIAGENDR)
 summary(model3)
 ```
+
 ```{r}
 # Extract the odds ratio for gender (exponentiating the coefficient from model)
 odds_ratio_gender <- exp(coef(model3)["RIAGENDR"])
@@ -273,8 +272,7 @@ print(paste("The odds ratio for gender (men compared to women) is:", odds_ratio_
 
 ```
 
-Based on the summary output from the model, we can tell that the p-value of the is less than 2e^-16, meaning it is a very significant predictor for the model. Therefore, we can reject the null hypothesis that the odds of wearing glasses/contact lenses are the same for men and women. The odds ratio tell us the factor by which the odds change for men compared to women.
-
+Based on the summary output from the model, we can tell that the p-value of the is less than 2e\^-16, meaning it is a very significant predictor for the model. Therefore, we can reject the null hypothesis that the odds of wearing glasses/contact lenses are the same for men and women. The odds ratio tell us the factor by which the odds change for men compared to women.
 
 ```{r}
 # Create contingency table for gender and glasses/contact lenses usage
@@ -287,8 +285,8 @@ chi_square_test <- chisq.test(table_gender_glasses)
 print(chi_square_test)
 
 ```
-The chi-square test has compared the proportions of glasses/contact lenses wearers between men and women. Because the p-value from the chi-square test is less than 0.05, we can reject the null hypothesis and confidently conclude that the proportion of glasses/contact lenses wearers is different for men and women.
 
+The chi-square test has compared the proportions of glasses/contact lenses wearers between men and women. Because the p-value from the chi-square test is less than 0.05, we can reject the null hypothesis and confidently conclude that the proportion of glasses/contact lenses wearers is different for men and women.
 
 ## **Problem 2 - Sakila**
 
@@ -342,8 +340,6 @@ print(oldest_movie)
 
 For each of the following questions, solve them in two ways: First, use SQL query or queries to extract the appropriate table(s), then use regular R operations on those data.frames to answer the question. Second, use a single SQL query to answer the question.
 
-
-
 **b)** What genre of movie is the least common in the data, and how many movies are of this genre?
 
 ```{r}
@@ -374,7 +370,6 @@ least_common_genre <- genres_data[which.min(genres_data$movie_count), ]
 print(least_common_genre)
 
 ```
-
 
 ```{r}
 #single query
@@ -428,6 +423,7 @@ countries_with_13_customers <- countries_data[countries_data$customer_count == 1
 print(countries_with_13_customers)
 
 ```
+
 ```{r}
 query_countries_13_customers <- "
   -- Select the country name and count the number of customers per country
@@ -458,7 +454,6 @@ countries_with_13_customers <- dbGetQuery(con, query_countries_13_customers)
 # Display the country or countries that have exactly 13 customers
 print(countries_with_13_customers)
 ```
-
 
 ## **Problem 3 - US Records**
 
@@ -560,4 +555,4 @@ hist(log(numbers),
 table(substr(numbers, 1, 1))
 ```
 
-Based on the output of table(substr(numbers, 1, 1)), the frequencies of the leading digits appear  uniform rather than following the expected decreasing distribution from Benford’s Law. Benford's Law states that lower digits should appear more frequently than higher digits. The fact that this data is roughly uniform indicates that this data does not represent naturally occurring patterns and suggests that it is synthetic.
+Based on the output of table(substr(numbers, 1, 1)), the frequencies of the leading digits appear uniform rather than following the expected decreasing distribution from Benford’s Law. Benford's Law states that lower digits should appear more frequently than higher digits. The fact that this data is roughly uniform indicates that this data does not represent naturally occurring patterns and suggests that it is synthetic.

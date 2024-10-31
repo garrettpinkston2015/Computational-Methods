@@ -14,6 +14,7 @@ github: https://github.com/garrettpinkston2015/Computational-Methods
 Install and load the package nycflights13.
 
 ```{r}
+# load in data
 library(nycflights13)
 ```
 
@@ -27,36 +28,62 @@ Additionally,
 
 ```{r}
 library(dplyr)
+
+#display maximum rows of tibble
 options(tibble.print_max = Inf)
 
 
 depStats <- flights %>%
-  group_by(dest) %>%
-  filter(n() >= 10) %>%  
+  #group by destination
+  group_by(dest) %>% 
+  
+  # filter where destinations are 10 or more
+  filter(n() >= 10) %>%
+  
+  # specify function output via summary
   summarize(
-    mean_dep_delay = mean(dep_delay, na.rm = TRUE),
-    median_dep_delay = median(dep_delay, na.rm = TRUE)
+    mean_dep_delay = mean(dep_delay, na.rm = TRUE), # return mean in summary
+    median_dep_delay = median(dep_delay, na.rm = TRUE) # return median in summary
   ) %>%
-  ungroup() %>%
-  left_join(airports, by = c("dest" = "faa")) %>% 
-  select(name, mean_dep_delay, median_dep_delay) %>%
-  arrange(desc(mean_dep_delay))
+  ungroup() %>% #ungroup the data
+  
+  #join the two datasets using "dest" and "faa"
+  left_join(airports, by = c("dest" = "faa")) %>% # 
+  
+  #select relevant columns of the output
+  select(name, mean_dep_delay, median_dep_delay) %>% 
+  
+  #arrange by descending mean delay
+  arrange(desc(mean_dep_delay)) 
 
+# print output
 print(depStats)
 
 ```
 
 ```{r}
+
 arrivalStats <- flights %>%
-  group_by(dest) %>%
-  filter(n() >= 10) %>%  
+  #group by the destination
+  group_by(dest) %>% 
+  
+  # filter where destinations are 10 or more
+  filter(n() >= 10) %>%
+  
+  # specify output via summary
   summarize(
-    mean_arr_delay = mean(arr_delay, na.rm = TRUE),
-    median_arr_delay = median(arr_delay, na.rm = TRUE)
+    mean_arr_delay = mean(arr_delay, na.rm = TRUE), # create mean arrival stat 
+    median_arr_delay = median(arr_delay, na.rm = TRUE) # create median arrival
   ) %>%
-  ungroup() %>%
-  left_join(airports, by = c("dest" = "faa")) %>%  
+  ungroup() %>% #ungroup data
+  
+  #join datasets by airports
+  left_join(airports, by = c("dest" = "faa")) %>%
+  
+  #select relevant columns of the output
   select(name, mean_arr_delay, median_arr_delay) %>%
+  
+  #arrange by descending mean delay
   arrange(desc(mean_arr_delay))
 
 print(arrivalStats)
@@ -66,25 +93,33 @@ print(arrivalStats)
 
 ```{r}
 
-flights_planes <- flights %>%
+flights_planes <- flights %>% 
+  #join datasets by tail number
   left_join(planes, by = "tailnum")
 
 flights_speeds <- flights_planes %>%
+  # filter isna
   filter(!is.na(air_time), !is.na(distance), !is.na(model)) %>%
-  mutate(speed_mph = distance / (air_time / 60))
+  
+  #calculate speed in mph
+  mutate(speed_mph = distance / (air_time / 60)) 
 
 model_speeds <- flights_speeds %>%
+  #group by model
   group_by(model) %>%
+  
+  # specify output via summary
   summarize(
-    avg_speed_mph = mean(speed_mph, na.rm = TRUE),
-    num_flights = n()
+    avg_speed_mph = mean(speed_mph, na.rm = TRUE), # calculate average speed
+    num_flights = n() #count number of flights
   ) %>%
-  ungroup()
+  ungroup() #ungroup data
 
 
+# finding the fastest plane 
 fastest_model <- model_speeds %>%
-  filter(avg_speed_mph == max(avg_speed_mph)) %>%
-  slice(1)
+  filter(avg_speed_mph == max(avg_speed_mph)) %>% #filter max speed
+  slice(1) #take first instance
 
 print(fastest_model)
 
@@ -104,6 +139,7 @@ Load the Chicago NNMAPS data we used in the visualization lectures. Write a func
 Prove your code works by evaluating the following. Your code should produce the result, or a reasonable error message.
 
 ```{r}
+# read in nnmaps dataset
 nnmaps <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/chicago-nmmaps.csv")
 ```
 
@@ -111,23 +147,52 @@ nnmaps <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/chicago
 library(dplyr)
 library(stringr)
 
+#' Retrieves the average temperature for a specified month and year.
+#'
+#' @param month Either a numeric value (1-12) or a string representing the month 
+#' (e.g., "Jan" or "February").
+#' @param year A numeric value between 1997 and 2000, specifying the year for 
+#' which the temperature is requested.
+#' @param data A dataset containing temperature data, with columns including 
+#' year, month, and temp.
+#' @param celsius Logical; if TRUE, converts the average temperature to Celsius. 
+#' Default is FALSE (Fahrenheit).
+#' @param average_fn A function used to compute the average (e.g., mean). 
+#' Default is mean.
+#'
+#' @return The average temperature for the specified month and year, in 
+#' Fahrenheit or Celsius as specified.
+#' @export
+#'
+#' @examples 
+#' get_temp("Apr", 1999, data = nnmaps)
+#' 49.7
+
 get_temp <- function(month, year, data, celsius = FALSE, average_fn = mean) {
+  
+  # Check if the year input is valid: a single numeric value between 1997 and 2000.
   if (!is.numeric(year) || length(year) != 1 || ((year > 2000) || (year < 1997))) {
     stop("Year must be provided as a single numeric value between 1997 and 2000.")
   }
   
+  # Determine if the month is numeric or character
   if (is.numeric(month)) {
+    # Validate numeric month range (1-12)
     if (month < 1 || month > 12) {
       stop("Month must be a number between 1 and 12.")
     }
     month_type <- "numeric"
   } else if (is.character(month)) {
+    # If month is a character, convert it to a three-letter abbreviation in lowercase
     month <- str_sub(str_to_lower(month), 1, 3)
     month_type <- "string"
   } else {
-    stop("Month must be either a numeric (1-12) or a string (e.g., 'Jan', 'February').")
+    # Error if month is not numeric or string
+    stop("Month must be either a numeric (1-12) or a string 
+         (e.g., 'Jan', 'February').")
   }
   
+  # Filter the data based on the month and year type (numeric or string)
   if (month_type == "numeric") {
     result <- data %>%
       filter(year == !!year, month_numeric == !!month) %>%
@@ -138,15 +203,19 @@ get_temp <- function(month, year, data, celsius = FALSE, average_fn = mean) {
       summarize(avg_temp = average_fn(temp))
   }
   
+  # Error if no data matches the specified criteria
   if (nrow(result) == 0) {
     stop("No matching data for the specified month and year.")
   }
   
+  # Extract the average temperature
   avg_temp <- result$avg_temp
+  # Convert to Celsius if requested
   if (celsius) {
     avg_temp <- (avg_temp - 32) * (5/9)
   }
   
+  # Return the final average temperature
   return(avg_temp)
 }
 
@@ -154,6 +223,8 @@ get_temp <- function(month, year, data, celsius = FALSE, average_fn = mean) {
 ```
 
 ```{r error=TRUE}
+# running through example codes
+
 get_temp("Apr", 1999, data = nnmaps)
 get_temp("Apr", 1999, data = nnmaps, celsius = TRUE)
 get_temp(10, 1998, data = nnmaps, average_fn = median)
@@ -177,71 +248,133 @@ art <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/df_for_ml_
 ```
 
 ```{r}
+# load in ggplot2
 library(ggplot2)
 
-class (art)
 art %>%
+  
+  # group data by 'year' to calculate average sales price per year
   group_by(year) %>%
+  
+  # calculate the average sales price in USD for each year
   summarize(avg_sales_price = mean(price_usd, na.rm = TRUE)) %>%
+  
+  # initialize ggplot, setting 'year' as x-axis and 'avg_sales_price' as y-axis
   ggplot(aes(x = year, y = avg_sales_price)) +
-  geom_line(color = "blue", size = 1) +
+  
+  # add a line plot for average sales price with blue color
+  geom_line(color = "blue", linewidth = 1) +
+  
+  # add red points at each year
   geom_point(color = "red", size = 2) +
+  
+  # add title and axes labels 
   labs(title = "Average Sales Price in USD Over Time",
        x = "Year",
        y = "Average Sales Price (USD)") +
-  theme_minimal() +
+  
+  # align plot title
   theme(plot.title = element_text(hjust = 0.5))
 
 ```
-
+Based on the graph, we can tell that the average sales price has increased over time. The first point is around 7,000 around the year 1997 and it has risen to almost 29,000 in the year 2012. Based on the graph, we can visualize the dramatic increase in the average sales price over time.
 
 -   Does the distribution of genre of sales across years appear to change?
 
 ```{r}
 
+# load in tidyr for data manipulation
 library(tidyr)
 
+# reshape the 'art' dataset to a long format
 df_long <- art %>%
+  # used pivot_longer to transform all columns starting with "Genre___" into 
+  # key-value pairs
   pivot_longer(cols = starts_with("Genre___"),
-               names_to = "genre", 
-               values_to = "count") %>%
-  filter(count == 1)  
+               names_to = "genre",       # New column for genre names
+               values_to = "count") %>%   # New column for genre values
+  # Filter when presence of a specific genre is in a sale
+  filter(count == 1)
 
+# visualize the yearly genre distribution
 df_long %>%
+  
+  # group data by both year and genre
   group_by(year, genre) %>%
+  
+  # count occurrences for each genre per year
   summarize(count = n()) %>%
+  
+  # group data by year to compute the proportion of each genre
   group_by(year) %>%
+  
+  # calculate proportion of each genre's count relative to all other counts
   mutate(proportion = count / sum(count)) %>%
+  
+  # use ggplot, setting 'year' as x-axis and 'proportion' as y-axis
   ggplot(aes(x = year, y = proportion, fill = genre)) +
+  
+  # using a stacked bar plot to show proportions per genre each year
   geom_bar(stat = "identity", position = "fill") +
+  
+  # adding title, x-axis, y-axis, and legend labels
   labs(title = "Distribution of Genre Sales Across Years",
        x = "Year",
        y = "Proportion of Sales",
        fill = "Genre") +
-  theme_minimal() +
+  
+  # center the plot title
   theme(plot.title = element_text(hjust = 0.5))
+
 ```
+Based on the graph, we can see the distribution of genre of sales across years changes heavily. "Photography" consistently holds a significant proportion, with its presence growing after 2000, while "Painting" sees a decline in proportional representation across the years. "Sculpture" has maintained steady sales, while "Print" and "Others" fluctuate but generally contribute smaller proportions. This suggests a shift in sales preference toward Photography as the years progress, indicating its rising popularity in the art market.
+
 
 -   How does the genre affect the change in sales price over time?
 ```{r}
 
+# reshape the 'art' dataset to a long format again
 df_long <- art %>%
+  # used pivot_longer to transform all columns starting with "Genre___" into 
+  # key-value pairs
   pivot_longer(cols = starts_with("Genre___"),
-               names_to = "genre", 
-               values_to = "count") %>%
-  filter(count == 1)  
+               names_to = "genre",       # New column for genre names
+               values_to = "count") %>%   # New column for genre values 
+  # Filter when presence of a specific genre is in a sale
+  filter(count == 1)
 
+# visualize the yearly average sales prices
 df_long %>%
+  # group the data by 'year' and 'genre' to calculate average sales price
   group_by(year, genre) %>%
+  
+  # calculate average sales price for each genre per year
   summarize(avg_sales_price = mean(price_usd, na.rm = TRUE)) %>%
+  
+  # use ggplot, setting 'year' as x, 'avg_sales_price' as y, colored by genre
   ggplot(aes(x = year, y = avg_sales_price, color = genre)) +
+  
+  # add a line for each genre's average sales price over time
   geom_line(size = 1) +
+  
+  # add points at each year for each genre
   geom_point(size = 2) +
+  
+  # adding title, x-axis, y-axis, and legend labels
   labs(title = "Sales Price by Genre Over Time",
        x = "Year",
        y = "Average Sales Price (USD)",
        color = "Genre") +
-  theme_minimal() +
+  
+  # center title of the plot
   theme(plot.title = element_text(hjust = 0.5))
 
 ```
+
+Here we can see that every genre has increased in popularity since the beginning year. Photography has increased the most, peaking in 2008 at a valuation around $60,000. "Print" also saw fluctuations and reached a peak around the same time but remained lower in value than "Photography." The other genres, including "Painting," "Sculpture," and "Others," remained relatively stable with smaller variations in their average sales prices over time. This suggests a surge in interest and value for "Photography" compared to other genres, particularly during the mid-2000s.
+
+
+
+
+
+

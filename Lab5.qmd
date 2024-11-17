@@ -170,3 +170,10 @@ quotient(r1)
 quotient(r2)
 quotient(r3)
 ```
+
+
+
+
+
+
+

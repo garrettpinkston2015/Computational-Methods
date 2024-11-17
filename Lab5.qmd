@@ -150,3 +150,23 @@ setMethod(
 7) You’ll (probably) need GCD and LCM as part of some of these calculations; include these functions using Rcpp. Even if you don’t need these functions for another calculation, include them. 
 
 
+```{r}
+r1 <- Rational(24, 6)
+r2 <- Rational(7, 230)
+r3 <- Rational(0, 4)
+
+# Show the objects
+r1
+r2
+r3
+
+# Simplify each object to verify functionality
+simplify(r1)
+simplify(r2)
+simplify(r3)
+
+# Check the quotient of each
+quotient(r1)
+quotient(r2)
+quotient(r3)
+```

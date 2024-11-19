@@ -101,13 +101,16 @@ setMethod(
   "add",
   c("Rational", "Rational"),
   function(x, y) {
-    lcm_den <- lcm(x@denominator, y@denominator)
-    new_numerator <- x@numerator * (lcm_den / x@denominator) +
-                     y@numerator * (lcm_den / y@denominator)
+    print(as.integer(x@denominator))  # Debugging: Print inputs
+    print(as.integer(y@denominator))  # Debugging: Print inputs
+    lcm_den <- my_lcm_export(as.integer(x@denominator), as.integer(y@denominator))
+    new_numerator <- as.integer(x@numerator) * (lcm_den / as.integer(x@denominator)) +
+                     as.integer(y@numerator) * (lcm_den / as.integer(y@denominator))
     simplify(Rational(new_numerator, lcm_den))
   }
 )
 ```
+
 ```{r}
 setGeneric("subtract", function(x, y) standardGeneric("subtract"))
 
@@ -115,7 +118,7 @@ setMethod(
   "subtract",
   c("Rational", "Rational"),
   function(x, y) {
-    lcm_den <- lcm(x@denominator, y@denominator)
+    lcm_den <- my_lcm_export(x@denominator, y@denominator)
     new_numerator <- x@numerator * (lcm_den / x@denominator) -
                      y@numerator * (lcm_den / y@denominator)
     simplify(Rational(new_numerator, lcm_den))
@@ -147,7 +150,49 @@ setMethod(
   }
 )
 ```
+
+```{r}
+setMethod(
+  "+",
+  c("Rational", "Rational"),
+  function(e1, e2) add(e1, e2) # Calls the `add` method
+)
+
+setMethod(
+  "-",
+  c("Rational", "Rational"),
+  function(e1, e2) subtract(e1, e2) # Calls the `subtract` method
+)
+
+setMethod(
+  "*",
+  c("Rational", "Rational"),
+  function(e1, e2) multiply(e1, e2) # Calls the `multiply` method
+)
+
+setMethod(
+  "/",
+  c("Rational", "Rational"),
+  function(e1, e2) divide(e1, e2) # Calls the `divide` method
+)
+```
 7) You’ll (probably) need GCD and LCM as part of some of these calculations; include these functions using Rcpp. Even if you don’t need these functions for another calculation, include them. 
+
+```{r}
+cppFunction('
+#include <cmath>
+
+int gcd_export(int a, int b) {
+  if (b == 0) return std::abs(a);
+  return gcd_export(b, a % b);
+}
+
+int my_lcm_export(int a, int b) {
+  return std::abs(a * b) / gcd_export(a, b);
+}
+')
+ls()
+```
 
 
 ```{r}
@@ -159,16 +204,42 @@ r3 <- Rational(0, 4)
 r1
 r2
 r3
+```
 
-# Simplify each object to verify functionality
+```{r error=TRUE}
+r1
+r3
+r1 + r2
+r1 - r2
+r1 * r2
+r1 / r2
+r1 + r3
+r1 * r3
+r2 / r3
+quotient(r1)
+quotient(r2)
+quotient(r2, digits = 3)
+quotient(r2, digits = 3.14)
+quotient(r2, digits = "avocado")
+q2 <- quotient(r2, digits = 3)
+q2
+quotient(r3)
 simplify(r1)
 simplify(r2)
 simplify(r3)
 
-# Check the quotient of each
-quotient(r1)
-quotient(r2)
-quotient(r3)
+add(r1, r2)
+
+```
+
+```{r}
+methods(my_lcm_export)  # Check if `lcm` is defined as a generic or from a package
+```
+
+```{r}
+gcd_export(12, 15)      # Should return 3
+my_lcm_export(12, 15)   # Should return 60
+
 ```
 
 
@@ -177,3 +248,218 @@ quotient(r3)
 
 
 
+
+
+
+## **Problem 2 - plotly**
+
+
+
+```{r}
+art <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/df_for_ml_improved_new_market.csv")
+
+```
+
+
+Does the distribution of genre of sales across years appear to change?
+
+```{r}
+
+# load in tidyr for data manipulation
+library(tidyr)
+library(dplyr)
+library(stringr)
+
+# reshape the 'art' dataset to a long format
+df_long <- art %>%
+  # used pivot_longer to transform all columns starting with "Genre___" into 
+  # key-value pairs
+  pivot_longer(cols = starts_with("Genre___"),
+               names_to = "genre",       # New column for genre names
+               values_to = "count") %>%   # New column for genre values
+  # Filter when presence of a specific genre is in a sale
+  filter(count == 1)
+
+# visualize the yearly genre distribution
+df_long %>%
+  
+  # group data by both year and genre
+  group_by(year, genre) %>%
+  
+  # count occurrences for each genre per year
+  summarize(count = n()) %>%
+  
+  # group data by year to compute the proportion of each genre
+  group_by(year) %>%
+  
+  # calculate proportion of each genre's count relative to all other counts
+  mutate(proportion = count / sum(count)) %>%
+  
+  # use ggplot, setting 'year' as x-axis and 'proportion' as y-axis
+  ggplot(aes(x = year, y = proportion, fill = genre)) +
+  
+  # using a stacked bar plot to show proportions per genre each year
+  geom_bar(stat = "identity", position = "fill") +
+  
+  # adding title, x-axis, y-axis, and legend labels
+  labs(title = "Distribution of Genre Sales Across Years",
+       x = "Year",
+       y = "Proportion of Sales",
+       fill = "Genre") +
+  
+  # center the plot title
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+# Load necessary libraries
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(plotly)
+
+# Reshape data to include genres and calculate yearly averages
+df_genre_price <- art %>%
+  pivot_longer(cols = starts_with("Genre___"),
+               names_to = "genre",
+               values_to = "count") %>%
+  filter(count == 1) %>% # Keep rows where the genre is present
+  mutate(genre = str_remove(genre, "^Genre___")) %>% # Clean genre names
+  group_by(year, genre) %>%
+  summarize(avg_price = mean(price_usd, na.rm = TRUE), .groups = "drop") 
+
+# Calculate the overall average sales price per year
+df_overall_price <- art %>%
+  group_by(year) %>%
+  summarize(avg_price = mean(price_usd, na.rm = TRUE), .groups = "drop") %>%
+  mutate(genre = "Overall")
+
+# Combine overall and genre-specific data
+df_combined <- bind_rows(df_genre_price, df_overall_price)
+
+# Create the interactive plot
+plotly_plot <- plot_ly(df_combined, 
+                       x = ~year, 
+                       y = ~avg_price, 
+                       color = ~genre, 
+                       type = 'scatter', 
+                       mode = 'lines+markers',
+                       line = list(width = 2),
+                       marker = list(size = 6)) %>%
+  layout(title = "Change in Sales Price Over Time by Genre",
+         xaxis = list(title = "Year"),
+         yaxis = list(title = "Average Sales Price (USD)"),
+         legend = list(title = list(text = "Genre")),
+         hovermode = "x unified")
+
+# Show the plot
+plotly_plot
+```
+
+
+## **Problem 3 - data.table**
+
+Install and load the package nycflights13.
+
+```{r}
+# load in data
+library(nycflights13)
+```
+
+**a)** Generate a table (which can just be a nicely printed tibble) reporting the mean and median departure delay per airport. Generate a second table (which again can be a nicely printed tibble) reporting the mean and median arrival delay per airport. Exclude any destination with under 10 flights. Do this exclusion through code, not manually.
+
+Additionally,
+
+-   Order both tables in descending mean delay.
+-   Both tables should use the airport names not the airport codes.
+-   Both tables should print all rows.
+
+```{r}
+# Load necessary libraries
+library(nycflights13)
+library(data.table)
+
+# Convert the flights and airports data to data.table
+flights_dt <- as.data.table(flights)
+airports_dt <- as.data.table(airports)
+
+# Part a: Mean and median departure delays per airport
+dep_stats <- flights_dt[
+  , .(count = .N), by = .(dest)
+][
+  count >= 10
+][
+  flights_dt, on = "dest"
+][
+  , .(
+    mean_dep_delay = mean(dep_delay, na.rm = TRUE),
+    median_dep_delay = median(dep_delay, na.rm = TRUE)
+  ), by = .(dest)
+][
+  airports_dt, on = .(dest = faa)
+][
+  order(-mean_dep_delay)
+][
+  , .(name, mean_dep_delay, median_dep_delay)
+]
+
+# Part a: Mean and median arrival delays per airport
+arr_stats <- flights_dt[
+  , .(count = .N), by = .(dest)
+][
+  count >= 10
+][
+  flights_dt, on = "dest"
+][
+  , .(
+    mean_arr_delay = mean(arr_delay, na.rm = TRUE),
+    median_arr_delay = median(arr_delay, na.rm = TRUE)
+  ), by = .(dest)
+][
+  airports_dt, on = .(dest = faa)
+][
+  order(-mean_arr_delay)
+][
+  , .(name, mean_arr_delay, median_arr_delay)
+]
+
+# Print the results
+print(dep_stats)
+print(arr_stats)
+
+```
+
+
+**b)** How many flights did the aircraft model with the fastest average speed take? Produce a tibble with 1 row, and entires for the model, average speed (in MPH) and number of flights.
+
+```{r}
+# Load necessary libraries
+library(nycflights13)
+library(data.table)
+
+# Convert flights and planes datasets to data.table
+flights_dt <- as.data.table(flights)
+planes_dt <- as.data.table(planes)
+
+# Join flights with planes to include model information
+flights_planes_dt <- flights_dt[
+  !is.na(air_time) & !is.na(distance),  # Exclude rows with missing air_time or distance
+  ][planes_dt, on = "tailnum"]
+
+# Calculate speed and aggregate by model
+model_speeds <- flights_planes_dt[
+  , .(
+    avg_speed_mph = mean(distance / (air_time / 60), na.rm = TRUE),  # Calculate average speed
+    num_flights = .N  # Count number of flights
+  ), by = model
+]
+
+# Find the model with the fastest average speed
+fastest_model <- model_speeds[
+  avg_speed_mph == max(avg_speed_mph, na.rm = TRUE)
+]
+
+# Print the result
+print(fastest_model)
+
+```

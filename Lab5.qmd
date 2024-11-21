@@ -1,7 +1,7 @@
 ---
 title: "Statistics 506- Problem Set #5"
 author: "Garrett Pinkston"
-format: pdf
+format: html
 editor: visual
 ---
 
@@ -9,40 +9,43 @@ editor: visual
 
 github: https://github.com/garrettpinkston2015/Computational-Methods
 
+
+
+
 ## **Problem 1 - OOP Programming**
 
 Create a class to represent rational numbers (numbers of the form \frac{a}{b} for integers $a$ and $b$. Do this using S4.
 
-
 **a)** For the rational class, define the following:
 
 ```{r}
+library(Rcpp)
+
+# Define the Rational Class
 setClass(
   "Rational",
-  slots = list(
-    numerator = "numeric",
-    denominator = "numeric"
-  ),
+  slots = c(numerator = "numeric", denominator = "numeric"),
   validity = function(object) {
     if (object@denominator == 0) {
-      return("Denominator cannot be zero.")
+      stop("Denominator cannot be 0.")
     }
     TRUE
   }
 )
 ```
 
-1) A constructor
+2)  A validator that ensures the denominator is non-zero. (Defined above in class)
 
 ```{r}
+# Constructor for the Rational Class
 Rational <- function(numerator, denominator = 1) {
   new("Rational", numerator = numerator, denominator = denominator)
 }
 ```
-2) A validator that ensures the denominator is non-zero. (Defined above in class)
 
-3) A show method.
+3)  A show method.
 ```{r}
+# Show Method
 setMethod(
   "show",
   "Rational",
@@ -52,146 +55,102 @@ setMethod(
 )
 ```
 
-4) A simplify method, to obtain the simplest form (e.g. simplify(2/4) produces 1/2).
+```{r}
+cppFunction("
+  #include <numeric>`
+  int compute_gcd(int a, int b) {
+    return std::gcd(a, b);
+  }")
+cppFunction("
+  #include <numeric>
+  int compute_lcm(int a, int b) {
+    return std::lcm(a, b);
+  }")
+```
+
+4)  A simplify method, to obtain the simplest form (e.g. simplify(2/4) produces 1/2).
+
+
 
 ```{r}
-library(Rcpp)
-
-cppFunction('
-int gcd(int a, int b) {
-  if (b == 0) return abs(a);
-  return gcd(b, a % b);
-}
-')
-
-setGeneric("simplify", function(x) standardGeneric("simplify"))
-
+# Simplify Method
+setGeneric("simplify", function(object) standardGeneric("simplify"))
 setMethod(
   "simplify",
   "Rational",
-  function(x) {
-    g <- gcd(x@numerator, x@denominator)
-    Rational(x@numerator / g, x@denominator / g)
+  function(object) {
+    gcd <- compute_gcd(object@numerator, object@denominator)
+    object@numerator <- object@numerator / gcd
+    object@denominator <- object@denominator / gcd
+    return(object)
   }
 )
 ```
 
-5) A quotient method (e.g. quotient(3/7) produces .42857143...). It should support a digits argument but only in the printing, not the returned result (Hint: what does print return?).
+5)  A quotient method (e.g. quotient(3/7) produces .42857143...). It should support a digits argument but only in the printing, not the returned result (Hint: what does print return?).
 
 ```{r}
-setGeneric("quotient", function(x, digits = 7) standardGeneric("quotient"))
-
+# Quotient Method
+setGeneric("quotient", function(object, digits = 7) standardGeneric("quotient"))
 setMethod(
   "quotient",
   "Rational",
-  function(x, digits = 7) {
-    result <- x@numerator / x@denominator
-    print(round(result, digits = digits))
-    result
+  function(object, digits = 7) {
+    if (!is.numeric(digits) || digits != as.integer(digits) || digits < 0) {
+      stop("Digits must be a non-negative integer.")
+    }
+    result <- object@numerator / object@denominator
+    cat(round(result, digits), "\n")
+    return(result)
   }
 )
 ```
 
-6) Addition, subtraction, multiplication, division. These should all return a rational.
+
+6)  Addition, subtraction, multiplication, division. These should all return a rational.
 
 ```{r}
-setGeneric("add", function(x, y) standardGeneric("add"))
-
-setMethod(
-  "add",
-  c("Rational", "Rational"),
-  function(x, y) {
-    print(as.integer(x@denominator))  # Debugging: Print inputs
-    print(as.integer(y@denominator))  # Debugging: Print inputs
-    lcm_den <- my_lcm_export(as.integer(x@denominator), as.integer(y@denominator))
-    new_numerator <- as.integer(x@numerator) * (lcm_den / as.integer(x@denominator)) +
-                     as.integer(y@numerator) * (lcm_den / as.integer(y@denominator))
-    simplify(Rational(new_numerator, lcm_den))
-  }
-)
-```
-
-```{r}
-setGeneric("subtract", function(x, y) standardGeneric("subtract"))
-
-setMethod(
-  "subtract",
-  c("Rational", "Rational"),
-  function(x, y) {
-    lcm_den <- my_lcm_export(x@denominator, y@denominator)
-    new_numerator <- x@numerator * (lcm_den / x@denominator) -
-                     y@numerator * (lcm_den / y@denominator)
-    simplify(Rational(new_numerator, lcm_den))
-  }
-)
-```
-
-```{r}
-setGeneric("multiply", function(x, y) standardGeneric("multiply"))
-
-setMethod(
-  "multiply",
-  c("Rational", "Rational"),
-  function(x, y) {
-    simplify(Rational(x@numerator * y@numerator, x@denominator * y@denominator))
-  }
-)
-```
-
-```{r}
-setGeneric("divide", function(x, y) standardGeneric("divide"))
-
-setMethod(
-  "divide",
-  c("Rational", "Rational"),
-  function(x, y) {
-    if (y@numerator == 0) stop("Division by zero is not allowed.")
-    simplify(Rational(x@numerator * y@denominator, x@denominator * y@numerator))
-  }
-)
-```
-
-```{r}
+# Arithmetic Methods (+, -, *, /)
 setMethod(
   "+",
   c("Rational", "Rational"),
-  function(e1, e2) add(e1, e2) # Calls the `add` method
+  function(e1, e2) {
+    lcm_den <- compute_lcm(e1@denominator, e2@denominator)
+    new_num <- (e1@numerator * (lcm_den / e1@denominator)) +
+               (e2@numerator * (lcm_den / e2@denominator))
+    return(simplify(Rational(new_num, lcm_den)))
+  }
 )
 
 setMethod(
   "-",
   c("Rational", "Rational"),
-  function(e1, e2) subtract(e1, e2) # Calls the `subtract` method
+  function(e1, e2) {
+    lcm_den <- compute_lcm(e1@denominator, e2@denominator)
+    new_num <- (e1@numerator * (lcm_den / e1@denominator)) -
+               (e2@numerator * (lcm_den / e2@denominator))
+    return(simplify(Rational(new_num, lcm_den)))
+  }
 )
 
 setMethod(
   "*",
   c("Rational", "Rational"),
-  function(e1, e2) multiply(e1, e2) # Calls the `multiply` method
+  function(e1, e2) {
+    return(simplify(Rational(e1@numerator * e2@numerator, e1@denominator * e2@denominator)))
+  }
 )
 
 setMethod(
   "/",
   c("Rational", "Rational"),
-  function(e1, e2) divide(e1, e2) # Calls the `divide` method
+  function(e1, e2) {
+    if (e2@numerator == 0) {
+      stop("Division by zero is not allowed.")
+    }
+    return(simplify(Rational(e1@numerator * e2@denominator, e1@denominator * e2@numerator)))
+  }
 )
-```
-7) You’ll (probably) need GCD and LCM as part of some of these calculations; include these functions using Rcpp. Even if you don’t need these functions for another calculation, include them. 
-
-```{r}
-cppFunction('
-#include <cmath>
-
-int gcd_export(int a, int b) {
-  if (b == 0) return std::abs(a);
-  return gcd_export(b, a % b);
-}
-
-int my_lcm_export(int a, int b) {
-  return std::abs(a * b) / gcd_export(a, b);
-}
-')
-ls()
 ```
 
 
@@ -200,10 +159,6 @@ r1 <- Rational(24, 6)
 r2 <- Rational(7, 230)
 r3 <- Rational(0, 4)
 
-# Show the objects
-r1
-r2
-r3
 ```
 
 ```{r error=TRUE}
@@ -228,38 +183,17 @@ simplify(r1)
 simplify(r2)
 simplify(r3)
 
-add(r1, r2)
-
 ```
-
-```{r}
-methods(my_lcm_export)  # Check if `lcm` is defined as a generic or from a package
-```
-
-```{r}
-gcd_export(12, 15)      # Should return 3
-my_lcm_export(12, 15)   # Should return 60
-
-```
-
-
-
-
-
-
 
 
 
 
 ## **Problem 2 - plotly**
 
-
-
 ```{r}
 art <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/df_for_ml_improved_new_market.csv")
 
 ```
-
 
 Does the distribution of genre of sales across years appear to change?
 
@@ -269,6 +203,7 @@ Does the distribution of genre of sales across years appear to change?
 library(tidyr)
 library(dplyr)
 library(stringr)
+library(ggplot2)
 
 # reshape the 'art' dataset to a long format
 df_long <- art %>%
@@ -356,7 +291,6 @@ plotly_plot <- plot_ly(df_combined,
 plotly_plot
 ```
 
-
 ## **Problem 3 - data.table**
 
 Install and load the package nycflights13.
@@ -428,7 +362,6 @@ print(dep_stats)
 print(arr_stats)
 
 ```
-
 
 **b)** How many flights did the aircraft model with the fastest average speed take? Produce a tibble with 1 row, and entires for the model, average speed (in MPH) and number of flights.
 

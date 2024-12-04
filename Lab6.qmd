@@ -1,9 +1,7 @@
 ---
-title: "Statistics 506- Problem Set #5"
+title: "Statistics 506- Problem Set #6"
 author: "Garrett Pinkston"
-format:
-  html:
-    embed-resources: true
+format: pdf
 editor: visual
 
 ---

@@ -3,459 +3,197 @@ title: "Statistics 506- Problem Set #6"
 author: "Garrett Pinkston"
 format: pdf
 editor: visual
-
 ---
 
 ## **Link to GitHub**
 
 github: https://github.com/garrettpinkston2015/Computational-Methods
 
+## **Stratified Bootstrapping**
 
+If a sample has a categorical variable with small groups, bootstrapping can be tricky. Consider a situation where $n = 100$, but there is some categorical variable $g$ where $g = 1$ has only 2 observations.
 
+In a single bootstrap resample of that data, there is a
 
-## **Problem 1 - OOP Programming**
+$$\binom{98}{100} \approx 13\%$$
 
-Create a class to represent rational numbers (numbers of the form \frac{a}{b} for integers $a$ and $b$. Do this using S4.
+chance that the bootstrap sample does not include either observation from $g = 1$. This implies that if we are attempting to obtain a bootstrap estimate in group $g = 1$, 13% of the bootstrapped samples will have no observations from that group and thus will be unable to produce an estimate.
 
-**a)** For the rational class, define the following:
+A way around this is to carry out stratified bootstrap: Instead of taking a sample with replacement of the whole sample, take separate bootstrap resamples within each strata, then combine those resamples to generate the bootstrap sample.
 
 ```{r}
-library(Rcpp)
+library(DBI)
+library(RSQLite)
 
-# Define the Rational Class
-setClass(
-  "Rational",
-  slots = c(numerator = "numeric", denominator = "numeric"),
-  validity = function(object) {
-    if (object@denominator == 0) {
-      stop("Denominator cannot be 0.")
-    }
-    TRUE
-  }
-)
+# Specify the path to your SQLite database
+db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
+
+# Connect to the database
+lahman <- dbConnect(RSQLite::SQLite(), dbname = db_path)
 ```
 
-2)  A validator that ensures the denominator is non-zero. (Defined above in class)
+Use the "lahman" data that we first introduced in SQL. In the statistical analysis of baseball statistics, one metric used to measure a player's performance is their **Range Factor**:
+
+$$RF = 3 \frac{PO + A}{InnOuts}$$
+
+Here, "PO" is putouts, "A" is assists, and "InnOuts" is the number of outs they were on the field for.
+
+1.  Calculate the average $RF$ for each team in the `Fielding` table. Then, since we don’t have a closed form for the standard deviation of this statistic, carry out a stratified bootstrap *by team* to estimate it. Do this out three ways:
+
+    1.  Without any parallel processing
 
 ```{r}
-# Constructor for the Rational Class
-Rational <- function(numerator, denominator = 1) {
-  new("Rational", numerator = numerator, denominator = denominator)
+library(dplyr)
+
+# connect to database
+db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
+
+lahman <- dbConnect(RSQLite::SQLite(), dbname = db_path)
+
+fielding <- dbReadTable(lahman, "Fielding")
+
+fielding <- fielding %>%
+  filter(!is.na(PO), !is.na(A), !is.na(InnOuts), InnOuts > 0) %>%
+  mutate(RF = 3 * (PO + A) / InnOuts)
+
+team_avg_rf <- fielding %>%
+  group_by(teamID) %>%
+  summarise(avg_RF = mean(RF, na.rm = TRUE))
+
+stratified_bootstrap <- function(data, strata_col, n_boot) {
+  results <- vector("list", n_boot)
+  
+  for (i in seq_len(n_boot)) {
+    boot_sample <- data %>%
+      group_by_at(strata_col) %>%
+      group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>%
+      ungroup()
+    
+    boot_avg_rf <- boot_sample %>%
+      group_by(teamID) %>%
+      summarise(avg_RF = mean(RF, na.rm = TRUE))
+    
+    results[[i]] <- boot_avg_rf
+  }
+  
+  bind_rows(results, .id = "bootstrap_iteration")
 }
+
+n_boot <- 1000
+boot_results <- stratified_bootstrap(fielding, "teamID", n_boot)
+
+boot_sd <- boot_results %>%
+  group_by(teamID) %>%
+  summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
+
+final_results <- team_avg_rf %>%
+  left_join(boot_sd, by = "teamID")
+
+print(final_results)
+
+dbDisconnect(lahman)
 ```
 
-3)  A show method.
-```{r}
-# Show Method
-setMethod(
-  "show",
-  "Rational",
-  function(object) {
-    cat(sprintf("%d/%d\n", object@numerator, object@denominator))
-  }
-)
-```
 
-4)  A simplify method, to obtain the simplest form (e.g. simplify(2/4) produces 1/2).
-
-```{r}
-# Simplify Method
-setGeneric("simplify", function(object) standardGeneric("simplify"))
-setMethod(
-  "simplify",
-  "Rational",
-  function(object) {
-    gcd <- compute_gcd(object@numerator, object@denominator)
-    object@numerator <- object@numerator / gcd
-    object@denominator <- object@denominator / gcd
-    return(object)
-  }
-)
-```
-
-5)  A quotient method (e.g. quotient(3/7) produces .42857143...). It should support a digits argument but only in the printing, not the returned result (Hint: what does print return?).
+parallel 
 
 ```{r}
-# Quotient Method
-setGeneric("quotient", function(object, digits = 7) standardGeneric("quotient"))
-setMethod(
-  "quotient",
-  "Rational",
-  function(object, digits = 7) {
-    if (!is.numeric(digits) || digits != as.integer(digits) || digits < 0) {
-      stop("Digits must be a non-negative integer.")
-    }
-    result <- object@numerator / object@denominator
-    cat(round(result, digits), "\n")
-    return(result)
-  }
-)
-```
-
-
-6)  Addition, subtraction, multiplication, division. These should all return a rational.
-
-```{r}
-# Arithmetic Methods (+, -, *, /)
-setMethod(
-  "+",
-  c("Rational", "Rational"),
-  function(e1, e2) {
-    lcm_den <- compute_lcm(e1@denominator, e2@denominator)
-    new_num <- (e1@numerator * (lcm_den / e1@denominator)) +
-               (e2@numerator * (lcm_den / e2@denominator))
-    return(simplify(Rational(new_num, lcm_den)))
-  }
-)
-
-setMethod(
-  "-",
-  c("Rational", "Rational"),
-  function(e1, e2) {
-    lcm_den <- compute_lcm(e1@denominator, e2@denominator)
-    new_num <- (e1@numerator * (lcm_den / e1@denominator)) -
-               (e2@numerator * (lcm_den / e2@denominator))
-    return(simplify(Rational(new_num, lcm_den)))
-  }
-)
-
-setMethod(
-  "*",
-  c("Rational", "Rational"),
-  function(e1, e2) {
-    return(simplify(Rational(e1@numerator * e2@numerator, e1@denominator * e2@denominator)))
-  }
-)
-
-setMethod(
-  "/",
-  c("Rational", "Rational"),
-  function(e1, e2) {
-    if (e2@numerator == 0) {
-      stop("Division by zero is not allowed.")
-    }
-    return(simplify(Rational(e1@numerator * e2@denominator, e1@denominator * e2@numerator)))
-  }
-)
-```
-
-
-7) You’ll (probably) need GCD and LCM as part of some of these calculations; include these functions using Rcpp. Even if you don’t need these functions for another calculation, include them.
-
-```{r}
-cppFunction("
-  #include <numeric>`
-  int compute_gcd(int a, int b) {
-    return std::gcd(a, b);
-  }")
-cppFunction("
-  #include <numeric>
-  int compute_lcm(int a, int b) {
-    return std::lcm(a, b);
-  }")
-```
-
-
-**b)** Use your rational class to create three objects:
-
-
-```{r}
-r1 <- Rational(24, 6)
-r2 <- Rational(7, 230)
-r3 <- Rational(0, 4)
-
-```
-
-
-Evaluate the following code (remember you can tell Quarto not to stop on errors):
-
-
-```{r error=TRUE}
-r1
-r3
-r1 + r2
-r1 - r2
-r1 * r2
-r1 / r2
-r1 + r3
-r1 * r3
-r2 / r3
-quotient(r1)
-quotient(r2)
-quotient(r2, digits = 3)
-quotient(r2, digits = 3.14)
-quotient(r2, digits = "avocado")
-q2 <- quotient(r2, digits = 3)
-q2
-quotient(r3)
-simplify(r1)
-simplify(r2)
-simplify(r3)
-
-```
-
-**c)** Show that your validator does not allow the creation of rational’s with 0 denominator, and check other malformed input to your constructor.
-
-
-```{r}
-# test validator and constructor with invalid inputs
-
-# create a rational number with a zero denominator
-tryCatch({
-  r_invalid <- Rational(1, 0)
-}, error = function(e) {
-  cat("Error:", e$message, "\n")
-})
-
-# create a rational number with a non-numeric numerator
-tryCatch({
-  r_invalid <- Rational("not_a_number", 2)
-}, error = function(e) {
-  cat("Error:", e$message, "\n")
-})
-
-# create a rational number with a non-numeric denominator
-tryCatch({
-  r_invalid <- Rational(3, "not_a_number")
-}, error = function(e) {
-  cat("Error:", e$message, "\n")
-})
-
-# create a rational number with missing arguments
-tryCatch({
-  r_invalid <- Rational()
-}, error = function(e) {
-  cat("Error:", e$message, "\n")
-})
-
-# create a rational number with only one argument (should default denominator to 1)
-tryCatch({
-  r_valid <- Rational(5)
-  r_valid
-}, error = function(e) {
-  cat("Error:", e$message, "\n")
-})
-```
-
-
-## **Problem 2 - plotly**
-
-```{r}
-# read in art data
-art <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/df_for_ml_improved_new_market.csv")
-
-```
-
-Does the distribution of genre of sales across years appear to change?
-
-```{r}
-
-# load in tidyr for data manipulation
-library(tidyr)
 library(dplyr)
-library(stringr)
-library(ggplot2)
+library(DBI)
+library(RSQLite)
+library(parallel)
 
-# reshape the 'art' dataset to a long format
-df_long <- art %>%
-  # used pivot_longer to transform all columns starting with "Genre___" into 
-  # key-value pairs
-  pivot_longer(cols = starts_with("Genre___"),
-               names_to = "genre",       # New column for genre names
-               values_to = "count") %>%   # New column for genre values
-  # Filter when presence of a specific genre is in a sale
-  filter(count == 1)
+# connect to database
+db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
+lahman <- dbConnect(SQLite(), dbname = db_path)
 
-# visualize the yearly genre distribution
-df_long %>%
+fielding <- dbReadTable(lahman, "Fielding") %>%
+  filter(!is.na(PO), !is.na(A), !is.na(InnOuts), InnOuts > 0) %>%
+  mutate(RF = 3 * (PO + A) / InnOuts)
+
+team_avg_rf <- fielding %>%
+  group_by(teamID) %>%
+  summarise(avg_RF = mean(RF, na.rm = TRUE))
+
+bootstrap_iter <- function(data) {
+  library(dplyr)
+  data %>%
+    group_by(teamID) %>%
+    group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>%
+    summarise(avg_RF = mean(RF, na.rm = TRUE))
+}
+
+parallel_bootstrap <- function(data, n_boot) {
+  n_cores <- detectCores() - 1  # Use all but one core
+  cl <- makeCluster(n_cores)
   
-  # group data by both year and genre
-  group_by(year, genre) %>%
+  clusterExport(cl, c("data", "bootstrap_iter"), envir = environment())
   
-  # count occurrences for each genre per year
-  summarize(count = n()) %>%
+  clusterEvalQ(cl, library(dplyr))
   
-  # group data by year to compute the proportion of each genre
-  group_by(year) %>%
+  results <- parLapply(cl, 1:n_boot, function(i) bootstrap_iter(data))
+  stopCluster(cl)  
   
-  # calculate proportion of each genre's count relative to all other counts
-  mutate(proportion = count / sum(count)) %>%
-  
-  # use ggplot, setting 'year' as x-axis and 'proportion' as y-axis
-  ggplot(aes(x = year, y = proportion, fill = genre)) +
-  
-  # using a stacked bar plot to show proportions per genre each year
-  geom_bar(stat = "identity", position = "fill") +
-  
-  # adding title, x-axis, y-axis, and legend labels
-  labs(title = "Distribution of Genre Sales Across Years",
-       x = "Year",
-       y = "Proportion of Sales",
-       fill = "Genre") +
-  
-  # center the plot title
-  theme(plot.title = element_text(hjust = 0.5))
+  bind_rows(results, .id = "bootstrap_iteration")
+}
+
+n_boot <- 1000
+boot_results <- parallel_bootstrap(fielding, n_boot)
+
+boot_sd <- boot_results %>%
+  group_by(teamID) %>%
+  summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
+
+final_results <- team_avg_rf %>%
+  left_join(boot_sd, by = "teamID")
+
+print(final_results)
+
+dbDisconnect(lahman)
+
 ```
 
+futures
 ```{r}
-# load libraries
 library(dplyr)
-library(tidyr)
-library(plotly)
+library(DBI)
+library(RSQLite)
+library(future)
+library(furrr) 
 
-# reshape data to include genres and calculate yearly averages
-df_genre_price <- art %>%
-  pivot_longer(cols = starts_with("Genre___"),
-               names_to = "genre",
-               values_to = "count") %>%
-  filter(count == 1) %>% # Keep rows where the genre is present
-  mutate(genre = str_remove(genre, "^Genre___")) %>% # Clean genre names
-  group_by(year, genre) %>%
-  summarize(avg_price = mean(price_usd, na.rm = TRUE), .groups = "drop") 
+# connect to database
+db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
+lahman <- dbConnect(SQLite(), dbname = db_path)
 
-# find overall average sales price per year
-df_overall_price <- art %>%
-  group_by(year) %>%
-  summarize(avg_price = mean(price_usd, na.rm = TRUE), .groups = "drop") %>%
-  mutate(genre = "Overall")
+fielding <- dbReadTable(lahman, "Fielding") %>%
+  filter(!is.na(PO), !is.na(A), !is.na(InnOuts), InnOuts > 0) %>%
+  mutate(RF = 3 * (PO + A) / InnOuts)
 
-# tally overall and genre-specific data
-df_combined <- bind_rows(df_genre_price, df_overall_price)
+team_avg_rf <- fielding %>%
+  group_by(teamID) %>%
+  summarise(avg_RF = mean(RF, na.rm = TRUE))
 
-# create an interactive plot
-plotly_plot <- plot_ly(df_combined, 
-                       x = ~year, 
-                       y = ~avg_price, 
-                       color = ~genre, 
-                       type = 'scatter', 
-                       mode = 'lines+markers',
-                       line = list(width = 2),
-                       marker = list(size = 6)) %>%
-  layout(title = "Change in Sales Price Over Time by Genre",
-         xaxis = list(title = "Year"),
-         yaxis = list(title = "Average Sales Price (USD)"),
-         legend = list(title = list(text = "Genre")),
-         hovermode = "x unified")
+bootstrap_iter <- function(data) {
+  data %>%
+    group_by(teamID) %>%
+    group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>%
+    summarise(avg_RF = mean(RF, na.rm = TRUE))
+}
 
-# display plot
-plotly_plot
-```
+plan(multisession) 
 
-## **Problem 3 - data.table**
+n_boot <- 1000
+boot_results <- future_map_dfr(1:n_boot, ~ bootstrap_iter(fielding), .options = furrr_options(seed = TRUE))
 
-Install and load the package nycflights13.
+boot_sd <- boot_results %>%
+  group_by(teamID) %>%
+  summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
 
-```{r}
-# load in data
-library(nycflights13)
-```
+final_results <- team_avg_rf %>%
+  left_join(boot_sd, by = "teamID")
 
-**a)** Generate a table (which can just be a nicely printed tibble) reporting the mean and median departure delay per airport. Generate a second table (which again can be a nicely printed tibble) reporting the mean and median arrival delay per airport. Exclude any destination with under 10 flights. Do this exclusion through code, not manually.
+print(final_results)
 
-Additionally,
-
--   Order both tables in descending mean delay.
--   Both tables should use the airport names not the airport codes.
--   Both tables should print all rows.
-
-```{r}
-# load the necessary libraries for data manipulation
-library(nycflights13)  # contains flight data
-library(data.table)    # for efficient data manipulation
-
-# convert the flights and airports data to data.table format
-flights_dt <- as.data.table(flights)
-airports_dt <- as.data.table(airports)
-
-# part a: compute mean and median departure delays for airports with 10 or more flights
-dep_stats <- flights_dt[
-  # count the number of flights per destination airport
-  , .(count = .N), by = .(dest)
-][
-  # filter to include only airports with at least 10 flights
-  count >= 10
-][
-  # join back to the flights data on destination airport
-  flights_dt, on = "dest"
-][
-  # calculate the mean and median departure delays per destination
-  , .(
-    mean_dep_delay = mean(dep_delay, na.rm = TRUE),   # average departure delay
-    median_dep_delay = median(dep_delay, na.rm = TRUE) # median departure delay
-  ), by = .(dest)
-][
-  # join with the airports data to get airport names
-  airports_dt, on = .(dest = faa)
-][
-  # sort the results by mean departure delay in descending order
-  order(-mean_dep_delay)
-][
-  # select only relevant columns: airport name, mean, and median delays
-  , .(name, mean_dep_delay, median_dep_delay)
-]
-
-# part a: Compute mean and median arrival delays for airports with 10 or more flights
-arr_stats <- flights_dt[
-  # count the number of flights per destination airport
-  , .(count = .N), by = .(dest)
-][
-  # filter to include only airports with at least 10 flights
-  count >= 10
-][
-  # join back to the flights data on destination airport
-  flights_dt, on = "dest"
-][
-  # calculate the mean and median arrival delays per destination
-  , .(
-    mean_arr_delay = mean(arr_delay, na.rm = TRUE),    # Average arrival delay
-    median_arr_delay = median(arr_delay, na.rm = TRUE) # Median arrival delay
-  ), by = .(dest)
-][
-  # join with the airports data to get airport names
-  airports_dt, on = .(dest = faa)
-][
-  # sort the results by mean arrival delay in descending order
-  order(-mean_arr_delay)
-][
-  # select only relevant columns: airport name, mean, and median delays
-  , .(name, mean_arr_delay, median_arr_delay)
-]
-
-# print the results for departure and arrival delay statistics
-print(dep_stats)
-print(arr_stats)
-```
-
-**b)** How many flights did the aircraft model with the fastest average speed take? Produce a tibble with 1 row, and entires for the model, average speed (in MPH) and number of flights.
-
-```{r}
-# load necessary libraries
-library(nycflights13)
-library(data.table)
-
-# convert flights and planes datasets to data.table
-flights_dt <- as.data.table(flights)
-planes_dt <- as.data.table(planes)
-
-# join flights with planes to include model information
-flights_planes_dt <- flights_dt[
-  !is.na(air_time) & !is.na(distance),  # exclude rows with missing air_time or distance
-  ][planes_dt, on = "tailnum"]
-
-# calculate speed and aggregate by model
-model_speeds <- flights_planes_dt[
-  , .(
-    avg_speed_mph = mean(distance / (air_time / 60), na.rm = TRUE),  # calculate average speed
-    num_flights = .N  # count number of flights
-  ), by = model
-]
-
-# find the model with the fastest average speed
-fastest_model <- model_speeds[
-  avg_speed_mph == max(avg_speed_mph, na.rm = TRUE)
-]
-
-# print the result
-print(fastest_model)
+dbDisconnect(lahman)
 
 ```

@@ -38,12 +38,13 @@ $$RF = 3 \frac{PO + A}{InnOuts}$$
 
 Here, "PO" is putouts, "A" is assists, and "InnOuts" is the number of outs they were on the field for.
 
-1.  Calculate the average $RF$ for each team in the `Fielding` table. Then, since we don’t have a closed form for the standard deviation of this statistic, carry out a stratified bootstrap *by team* to estimate it. Do this out three ways:
+a)  Calculate the average $RF$ for each team in the `Fielding` table. Then, since we don’t have a closed form for the standard deviation of this statistic, carry out a stratified bootstrap *by team* to estimate it. Do this out three ways:
 
     1.  Without any parallel processing
 
 ```{r}
 library(dplyr)
+
 
 # connect to database
 db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
@@ -86,16 +87,17 @@ boot_sd <- boot_results %>%
   group_by(teamID) %>%
   summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
 
-final_results <- team_avg_rf %>%
+final_results_normal <- team_avg_rf %>%
   left_join(boot_sd, by = "teamID")
 
-print(final_results)
+print(final_results_normal)
 
 dbDisconnect(lahman)
 ```
 
 
-parallel 
+    2.  Using parallel processing with the parallel package.
+
 
 ```{r}
 library(dplyr)
@@ -144,16 +146,19 @@ boot_sd <- boot_results %>%
   group_by(teamID) %>%
   summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
 
-final_results <- team_avg_rf %>%
+final_results_parallel <- team_avg_rf %>%
   left_join(boot_sd, by = "teamID")
 
-print(final_results)
+print(final_results_parallel)
 
 dbDisconnect(lahman)
 
 ```
 
-futures
+
+
+    3.  Using futures with the future package.
+
 ```{r}
 library(dplyr)
 library(DBI)
@@ -189,11 +194,58 @@ boot_sd <- boot_results %>%
   group_by(teamID) %>%
   summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
 
-final_results <- team_avg_rf %>%
+final_result_future <- team_avg_rf %>%
   left_join(boot_sd, by = "teamID")
 
-print(final_results)
+print(final_result_future)
 
 dbDisconnect(lahman)
 
 ```
+
+
+b)  Generate a table showing the estimated RF and associated standard errors for the teams with the 10 highest RF from the three approaches.
+
+
+```{r}
+
+#normalize names for consistency
+results_non_parallel <- final_results_normal  
+results_parallel <- final_results_parallel     
+results_future <- final_result_future        
+
+results_non_parallel <- results_non_parallel %>% mutate(method = "Non-Parallel")
+results_parallel <- results_parallel %>% mutate(method = "Parallel")
+results_future <- results_future %>% mutate(method = "Future")
+all_results <- bind_rows(results_non_parallel, results_parallel, results_future)
+
+top_teams <- all_results %>%
+  arrange(desc(avg_RF)) %>%
+  group_by(method) %>%
+  slice_head(n = 10) %>%
+  ungroup()
+
+library(knitr)
+library(kableExtra)
+
+top_teams_table <- top_teams %>%
+  select(teamID, avg_RF, sd_RF, method) %>%
+  arrange(method, desc(avg_RF)) %>%
+  kable(
+    format = "latex",  
+    booktabs = TRUE,  
+    col.names = c("Team ID", "Average RF", "Standard Error", "Method"),
+    caption = "Top 10 Teams with Highest RF Across Methods"
+  ) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+top_teams_table
+```
+
+c) Report and discuss the performance difference between the versions:
+
+The future method generally produces slightly lower or comparable standard errors for most teams, which shows better consistency in bootstrap sampling across iterations since it handles random seeds and parallelization better. On the other hand, the non-parallel method shows slightly higher standard errors in some cases compared to future, potentially due to computational limitations or slight inconsistencies in handling random sampling over a long single-threaded process. Last, the parallel method sometimes shows the highest standard errors (e.g., MLU, KEO), which could be attributed to variations in random sampling or differences in how workers handle bootstrap iterations in a distributed environment.
+
+The three methods analyzed produce pretty consistent results in terms of average RF and team rankings, but their efficiency and reliability differ. The future approach stands out as the best overall method for handling stratified bootstrapping for this problem.
+
+

@@ -54,7 +54,20 @@ team_avg_rf <- fielding %>%
   group_by(teamID) %>%                     # group data by teamID
   summarise(avg_RF = mean(RF, na.rm = TRUE)) # find the mean RF for each team
 
-# perform stratified bootstrap
+#' Perform Stratified Bootstrap
+#'
+#' This performs a stratified bootstrap by resampling within groups
+#'
+#' @param data A data frame containing the data to be bootstrapped
+#' @param strata_col The name of the column used for grouping.
+#' @param n_boot The amount of bootstrap samples to generate.
+#'
+#' @return A data frame with bootstrap results with the bootstrap iteration and calculated statistics for each group.
+#' @export
+#'
+#' @examples
+#' # Example:
+#' boot_results <- stratified_bootstrap(data = my_data, strata_col = "teamID", n_boot = 1000)
 stratified_bootstrap <- function(data, strata_col, n_boot) {
   results <- vector("list", n_boot)         # initialize list to store results
   
@@ -121,7 +134,20 @@ team_avg_rf <- fielding %>%
   group_by(teamID) %>%                    # groups data by team ID
   summarise(avg_RF = mean(RF, na.rm = TRUE)) # find mean rf for each team
 
-# perform single bootstrap iteration
+#' Perform single bootstrap iteration
+#'
+#' This function performs a single bootstrap by resampling within defined groups
+#'
+#' @param data A data frame containing data for the bootstrap operation
+#' @param strata_col Name of column used for grouping.
+#' @param n_boot The amount of bootstrap samples to generate.
+#'
+#' @return A data frame with bootstrap results with the bootstrap iteration and calculated statistics for each group.
+#' @export
+#'
+#' @examples
+#' # Example usage:
+#' boot_results <- stratified_bootstrap(data = my_data, strata_col = "teamID", n_boot = 1000)
 bootstrap_iter <- function(data) {
   library(dplyr)                            # reload dplyr (this fixed it)
   data %>%
@@ -133,6 +159,19 @@ bootstrap_iter <- function(data) {
 }
 
 
+#' Perform Parallel Bootstrap
+#'
+#' This function performs a parallel bootstrap.
+#'
+#' @param data A data frame which contains the data for bootstrap
+#' @param n_boot The number of iterations to perform
+#'
+#' @return A data frame with bootstrap results with the bootstrap iteration and calculated statistics for each group.
+#' @export
+#'
+#' @examples
+#' # Example usage:
+#' boot_results <- parallel_bootstrap(data = my_data, n_boot = 1000)
 parallel_bootstrap <- function(data, n_boot) {
   n_cores <- detectCores() - 1              # use most cores for parallel processing
   cl <- makeCluster(n_cores)                # create cluster
@@ -196,7 +235,20 @@ team_avg_rf <- fielding %>%
   group_by(teamID) %>%                    # groups data by team ID
   summarise(avg_RF = mean(RF, na.rm = TRUE)) # find mean rf for each team
 
-# function for single bootstrap
+#' Perform single bootstrap iteration
+#'
+#' This function performs a single bootstrap by resampling within defined groups
+#'
+#' @param data A data frame containing data for the bootstrap operation
+#' @param strata_col Name of column used for grouping.
+#' @param n_boot The amount of bootstrap samples to generate.
+#'
+#' @return A data frame with bootstrap results with the bootstrap iteration and calculated statistics for each group.
+#' @export
+#'
+#' @examples
+#' # Example usage:
+#' boot_results <- stratified_bootstrap(data = my_data, strata_col = "teamID", n_boot = 1000)
 bootstrap_iter <- function(data) {
   data %>%
     group_by(teamID) %>%                     # groups data by team ID
@@ -278,8 +330,12 @@ top_teams_table
 
 c) Report and discuss the performance difference between the versions:
 
-The future method generally produces slightly lower or comparable standard errors for most teams, which shows better consistency in bootstrap sampling across iterations since it handles random seeds and parallelization better. On the other hand, the non-parallel method shows slightly higher standard errors in some cases compared to future, potentially due to computational limitations or slight inconsistencies in handling random sampling over a long single-threaded process. Last, the parallel method sometimes shows the highest standard errors (e.g., MLU, KEO), which could be attributed to variations in random sampling or differences in how workers handle bootstrap iterations in a distributed environment.
+The future method generally produces slightly lower or comparable standard errors for most teams, which shows better consistency in bootstrap sampling across iterations since it handles random seeds and parallelization better. It is the fastest because it optimally manages parallel tasks.
 
-The three methods analyzed produce pretty consistent results in terms of average RF and team rankings, but their efficiency and reliability differ. The future approach stands out as the best overall method for handling stratified bootstrapping for this problem.
+On the other hand, the non-parallel method shows slightly higher standard errors in some cases compared to future, which can be due to computational limitations or inconsistencies in handling random sampling. It is moderately fast but can be slower than the future method due to the cluster setup.
+
+Last, the parallel method sometimes shows the highest standard errors (e.g., MLU, KEO), which could be attributed to variations in random sampling or differences in how workers handle bootstrap iterations in a distributed environment. It is the slowest, as it processes all iterations sequentially.
+
+The three methods analyzed produce pretty consistent results in terms of average RF and team rankings, but their efficiency and reliability differ. The future approach stands out as the best overall method for handling stratified bootstrapping for this problem. This future method stands out as the most efficient, providing both speed and consistency. The non-parallel method is impractical, while the parallel method offers some speed improvements but lacks the scalability of the future approach.
 
 

@@ -21,17 +21,6 @@ chance that the bootstrap sample does not include either observation from $g = 1
 
 A way around this is to carry out stratified bootstrap: Instead of taking a sample with replacement of the whole sample, take separate bootstrap resamples within each strata, then combine those resamples to generate the bootstrap sample.
 
-```{r}
-library(DBI)
-library(RSQLite)
-
-# Specify the path to your SQLite database
-db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
-
-# Connect to the database
-lahman <- dbConnect(RSQLite::SQLite(), dbname = db_path)
-```
-
 Use the "lahman" data that we first introduced in SQL. In the statistical analysis of baseball statistics, one metric used to measure a player's performance is their **Range Factor**:
 
 $$RF = 3 \frac{PO + A}{InnOuts}$$
@@ -44,55 +33,68 @@ a)  Calculate the average $RF$ for each team in the `Fielding` table. Then, sinc
 
 ```{r}
 library(dplyr)
+library(DBI)
+library(RSQLite)
 
-
-# connect to database
 db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
 
+# connect to database, read fielding table
 lahman <- dbConnect(RSQLite::SQLite(), dbname = db_path)
-
 fielding <- dbReadTable(lahman, "Fielding")
 
+# filter and clean and calculate RF
 fielding <- fielding %>%
+  # remove missing or null rows
   filter(!is.na(PO), !is.na(A), !is.na(InnOuts), InnOuts > 0) %>%
+  # add column for rf
   mutate(RF = 3 * (PO + A) / InnOuts)
 
+# find the average RF for each team
 team_avg_rf <- fielding %>%
-  group_by(teamID) %>%
-  summarise(avg_RF = mean(RF, na.rm = TRUE))
+  group_by(teamID) %>%                     # group data by teamID
+  summarise(avg_RF = mean(RF, na.rm = TRUE)) # find the mean RF for each team
 
+# perform stratified bootstrap
 stratified_bootstrap <- function(data, strata_col, n_boot) {
-  results <- vector("list", n_boot)
+  results <- vector("list", n_boot)         # initialize list to store results
   
-  for (i in seq_len(n_boot)) {
+  for (i in seq_len(n_boot)) {              # loop over number of bootstrap iterations
+    # resample within each group and combine
     boot_sample <- data %>%
-      group_by_at(strata_col) %>%
-      group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>%
+      group_by_at(strata_col) %>%           # group by column
+      group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>% # resample with replacement
       ungroup()
     
+    # find average RF for each team in the bootstrap sample
     boot_avg_rf <- boot_sample %>%
       group_by(teamID) %>%
       summarise(avg_RF = mean(RF, na.rm = TRUE))
     
+    # store results
     results[[i]] <- boot_avg_rf
   }
   
+  # combine all results together
   bind_rows(results, .id = "bootstrap_iteration")
 }
 
+# set number of bootstrap iterations and perform bootstap
 n_boot <- 1000
 boot_results <- stratified_bootstrap(fielding, "teamID", n_boot)
 
+# find standard deviation of bootstrap means for each team
 boot_sd <- boot_results %>%
-  group_by(teamID) %>%
-  summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
+  group_by(teamID) %>%                     # group by teamID
+  summarise(sd_RF = sd(avg_RF, na.rm = TRUE)) # compute the standard deviation of RF
 
+# combine all results into dataframe
 final_results_normal <- team_avg_rf %>%
-  left_join(boot_sd, by = "teamID")
+  left_join(boot_sd, by = "teamID")        # match by teamID to combine results
 
+# print and disconnect
 print(final_results_normal)
-
 dbDisconnect(lahman)
+
 ```
 
 
@@ -100,58 +102,70 @@ dbDisconnect(lahman)
 
 
 ```{r}
-library(dplyr)
 library(DBI)
-library(RSQLite)
 library(parallel)
 
-# connect to database
+# connect ot database
 db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
 lahman <- dbConnect(SQLite(), dbname = db_path)
 
+# read fielding and calculate range factor
 fielding <- dbReadTable(lahman, "Fielding") %>%
+  # filter out missing or invalid data
   filter(!is.na(PO), !is.na(A), !is.na(InnOuts), InnOuts > 0) %>%
+  # calculate rf using provided formula
   mutate(RF = 3 * (PO + A) / InnOuts)
 
+# find average rf for each team
 team_avg_rf <- fielding %>%
-  group_by(teamID) %>%
-  summarise(avg_RF = mean(RF, na.rm = TRUE))
+  group_by(teamID) %>%                    # groups data by team ID
+  summarise(avg_RF = mean(RF, na.rm = TRUE)) # find mean rf for each team
 
+# perform single bootstrap iteration
 bootstrap_iter <- function(data) {
-  library(dplyr)
+  library(dplyr)                            # reload dplyr (this fixed it)
   data %>%
-    group_by(teamID) %>%
+    group_by(teamID) %>%                    # group data by team
+    # resample data within each group
     group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>%
+    # find average RF for each resampled group
     summarise(avg_RF = mean(RF, na.rm = TRUE))
 }
 
+
 parallel_bootstrap <- function(data, n_boot) {
-  n_cores <- detectCores() - 1  # Use all but one core
-  cl <- makeCluster(n_cores)
+  n_cores <- detectCores() - 1              # use most cores for parallel processing
+  cl <- makeCluster(n_cores)                # create cluster
   
+  # give data and bootsteap to all workewrs
   clusterExport(cl, c("data", "bootstrap_iter"), envir = environment())
-  
   clusterEvalQ(cl, library(dplyr))
   
+  # perform bootstrap iterations in parallel
   results <- parLapply(cl, 1:n_boot, function(i) bootstrap_iter(data))
-  stopCluster(cl)  
   
-  bind_rows(results, .id = "bootstrap_iteration")
+  stopCluster(cl)                           # stop cluster when done
+  
+  bind_rows(results, .id = "bootstrap_iteration") # combine all results into one table
 }
 
+# define bootstrap number and run parallel process
 n_boot <- 1000
 boot_results <- parallel_bootstrap(fielding, n_boot)
 
+# find sd of bootstrap results for each team
 boot_sd <- boot_results %>%
-  group_by(teamID) %>%
-  summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
+  group_by(teamID) %>%                     # groub by team id
+  summarise(sd_RF = sd(avg_RF, na.rm = TRUE)) # find sd of RD
 
+# combine original average with new results
 final_results_parallel <- team_avg_rf %>%
-  left_join(boot_sd, by = "teamID")
+  left_join(boot_sd, by = "teamID")        # match rows using team ID
 
+# print and disconnect
 print(final_results_parallel)
-
 dbDisconnect(lahman)
+
 
 ```
 
@@ -170,35 +184,48 @@ library(furrr)
 db_path <- "/Users/garrettpinkston/Desktop/Michigan/STAT506/Data/lahman_1871-2022.sqlite"
 lahman <- dbConnect(SQLite(), dbname = db_path)
 
+# read fielding and calculate range factor
 fielding <- dbReadTable(lahman, "Fielding") %>%
+  # filter out missing or invalid data
   filter(!is.na(PO), !is.na(A), !is.na(InnOuts), InnOuts > 0) %>%
+  # calculate rf using provided formula
   mutate(RF = 3 * (PO + A) / InnOuts)
 
+# find average rf for each team
 team_avg_rf <- fielding %>%
-  group_by(teamID) %>%
-  summarise(avg_RF = mean(RF, na.rm = TRUE))
+  group_by(teamID) %>%                    # groups data by team ID
+  summarise(avg_RF = mean(RF, na.rm = TRUE)) # find mean rf for each team
 
+# function for single bootstrap
 bootstrap_iter <- function(data) {
   data %>%
-    group_by(teamID) %>%
-    group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>%
-    summarise(avg_RF = mean(RF, na.rm = TRUE))
+    group_by(teamID) %>%                     # groups data by team ID
+    group_modify(~ .x[sample(nrow(.x), replace = TRUE), ]) %>% # resample data
+    summarize(avg_RF = mean(RF, na.rm = TRUE)) # find mean rf for each group
 }
 
-plan(multisession) 
-
+# setup parallel processing and define number of bootstraps
+plan(multisession)
 n_boot <- 1000
-boot_results <- future_map_dfr(1:n_boot, ~ bootstrap_iter(fielding), .options = furrr_options(seed = TRUE))
 
+# perform bootstap and combine results
+boot_results <- future_map_dfr(
+  1:n_boot,                               # iterate to n_boot
+  ~ bootstrap_iter(fielding),             # apply bootstrap function
+  .options = furrr_options(seed = TRUE) #set random seed
+)
+
+# find sd of the bootstrap estimates for each team
 boot_sd <- boot_results %>%
-  group_by(teamID) %>%
-  summarise(sd_RF = sd(avg_RF, na.rm = TRUE))
+  group_by(teamID) %>%                    # group by team ID
+  summarise(sd_RF = sd(avg_RF, na.rm = TRUE)) # find sd of RF
 
+# merge both datasets
 final_result_future <- team_avg_rf %>%
-  left_join(boot_sd, by = "teamID")
+  left_join(boot_sd, by = "teamID")       # joining on team id
 
+# print and disconnect from database
 print(final_result_future)
-
 dbDisconnect(lahman)
 
 ```
@@ -209,36 +236,43 @@ b)  Generate a table showing the estimated RF and associated standard errors for
 
 ```{r}
 
-#normalize names for consistency
+# normalize variable names
 results_non_parallel <- final_results_normal  
-results_parallel <- final_results_parallel     
-results_future <- final_result_future        
+results_parallel <- final_results_parallel   
+results_future <- final_result_future       
 
+# add a column for each method used for each set of results
 results_non_parallel <- results_non_parallel %>% mutate(method = "Non-Parallel")
 results_parallel <- results_parallel %>% mutate(method = "Parallel")
 results_future <- results_future %>% mutate(method = "Future")
+
+# combine all results
 all_results <- bind_rows(results_non_parallel, results_parallel, results_future)
 
+# get the top 10 teams with the highest RF for each method
 top_teams <- all_results %>%
-  arrange(desc(avg_RF)) %>%
-  group_by(method) %>%
-  slice_head(n = 10) %>%
-  ungroup()
+  arrange(desc(avg_RF)) %>%       # sort by rf descending
+  group_by(method) %>%            # Group by method
+  slice_head(n = 10) %>%          # Take the top 10 teams from each group
+  ungroup()                       # Remove grouping for further operations
 
+# table libraries
 library(knitr)
 library(kableExtra)
 
+# format a table of the top 10 teams
 top_teams_table <- top_teams %>%
-  select(teamID, avg_RF, sd_RF, method) %>%
-  arrange(method, desc(avg_RF)) %>%
+  select(teamID, avg_RF, sd_RF, method) %>%  # select relevant columns
+  arrange(method, desc(avg_RF)) %>%          # sort by method and then by RF
   kable(
-    format = "latex",  
-    booktabs = TRUE,  
-    col.names = c("Team ID", "Average RF", "Standard Error", "Method"),
-    caption = "Top 10 Teams with Highest RF Across Methods"
+    format = "latex",                        # specify format for pdf output
+    booktabs = TRUE,                         # adds table borders
+    col.names = c("Team ID", "Average RF", "Standard Error", "Method"), # column titles
+    caption = "Top 10 Teams with Highest RF Across Methods"             # table name
   ) %>%
-  kable_styling(latex_options = c("striped", "hold_position"))
+  kable_styling(latex_options = c("striped", "hold_position")) # add fixed position
 
+# print table
 top_teams_table
 ```
 

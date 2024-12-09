@@ -76,10 +76,13 @@ df <- merge(agi, hc, by = "zipcode")
 
 df <- df %>%
   filter(grepl("^\\d{5}$", zipcode) & zipcode != "99999")
+
+df <- na.omit(df)
+
 ```
 
 ```{r}
-agi[agi$zipcode == 95124, ]
+df[df$avg_agi == 95124, ]
 hc[hc$zipcode == 95124, ]
 
 agi
@@ -132,6 +135,25 @@ summary_metrics <- df %>%
 
 summary_metrics
 ```
+```{r}
+#Deal with outliers
+remove_outliers <- function(df, col) {
+  Q1 <- quantile(df[[col]], 0.25, na.rm = TRUE) 
+  Q3 <- quantile(df[[col]], 0.75, na.rm = TRUE) 
+  IQR <- Q3 - Q1  # Interquartile range
+  
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  
+  df <- df %>%
+    filter(df[[col]] >= lower_bound & df[[col]] <= upper_bound)
+  
+  return(df)
+}
+
+df <- remove_outliers(df, "services_per_beneficiary")
+df <- remove_outliers(df, "payment_per_beneficiary")
+```
 
 ```{r}
 # t-tests for income groups (might need to do ANOVA or Tukey's here)
@@ -163,6 +185,29 @@ list(
 )
 
 ```
+
+```{r}
+
+df$income_group <- factor(df$income_group, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
+
+anova_services <- aov(services_per_beneficiary ~ income_group, data = df)
+anova_payments <- aov(payment_per_beneficiary ~ income_group, data = df)
+
+summary(anova_services)
+summary(anova_payments)
+```
+```{r}
+
+tukey_services <- TukeyHSD(anova_services)
+tukey_payments <- TukeyHSD(anova_payments)
+
+# Print Tukey's results
+print(tukey_services)
+print(tukey_payments)
+
+```
+
+
 
 ```{r}
 library(ggplot2)
@@ -232,7 +277,6 @@ ggplot(df, aes(x = income_group, y = log_services_per_beneficiary, fill = income
 ```{r}
 library(ggplot2)
 library(dplyr)
-library(ggpubr)
 
 summary_df <- df %>%
   group_by(income_group) %>%

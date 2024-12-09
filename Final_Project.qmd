@@ -1,0 +1,252 @@
+---
+title: "FinalProject"
+format: pdf
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Data Import
+
+```{r}
+agi_expanded <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Final/Data/20zpallagi (1).csv")
+hc_expanded <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Final/Data/MUP_PHY_R24_P07_V10_D22_Prov.csv")
+
+```
+
+
+
+
+```{r}
+agi = subset(agi_expanded, select = c("zipcode", "agi_stub", "A00100","N1"))
+
+hc = subset(hc_expanded, select = c("Rndrng_Prvdr_Zip5", "Tot_Benes", "Tot_Srvcs", "Tot_Mdcr_Pymt_Amt"))
+```
+
+
+```{r}
+hc
+```
+
+```{r}
+agi_expanded[agi_expanded$zipcode == 95124, ]
+
+agi[agi$zipcode == 95124, ]
+
+```
+
+```{r}
+library(dplyr)
+
+
+colnames(hc)[colnames(hc) == 'Rndrng_Prvdr_Zip5'] <- 'zipcode'
+
+colnames(agi)[colnames(agi) == 'agi_stub'] <- 'agi_bracket'
+colnames(agi)[colnames(agi) == 'A00100'] <- 'agi'
+colnames(agi)[colnames(agi) == 'N1'] <- 'nreturns'
+
+
+agi['avg_agi'] = agi['agi']/agi['nreturns']
+agi[agi$zipcode == 95125, ]
+
+
+```
+
+```{r}
+
+agi <- agi %>%
+  group_by(zipcode) %>%
+  summarize(
+    avg_agi = sum(agi, na.rm = TRUE) / sum(nreturns, na.rm = TRUE), 
+    total_agi = sum(agi, na.rm = TRUE)
+  )
+
+hc <- hc %>%
+  group_by(zipcode) %>%
+  summarize(
+    total_beneficiaries = sum(Tot_Benes, na.rm = TRUE),
+    total_services = sum(Tot_Srvcs, na.rm = TRUE),
+    total_payments = sum(Tot_Mdcr_Pymt_Amt, na.rm = TRUE)
+  )
+
+
+df <- merge(agi, hc, by = "zipcode")
+
+df <- df %>%
+  filter(grepl("^\\d{5}$", zipcode) & zipcode != "99999")
+```
+
+```{r}
+agi[agi$zipcode == 95124, ]
+hc[hc$zipcode == 95124, ]
+
+agi
+hc
+
+summary(df)
+```
+
+```{r}
+library(dplyr)
+
+
+income_quantiles <- quantile(df$avg_agi, probs = c(0.33, 0.66), na.rm = TRUE)
+
+df <- df %>%
+  mutate(income_group = case_when(
+    avg_agi <= income_quantiles[1] ~ "Low",
+    avg_agi > income_quantiles[1] & avg_agi <= income_quantiles[2] ~ "Middle",
+    avg_agi > income_quantiles[2] ~ "High",
+    TRUE ~ NA_character_
+  ))
+
+table(df$income_group)
+
+df <- df %>%
+  mutate(
+    services_per_beneficiary = total_services / total_beneficiaries,
+    payment_per_beneficiary = total_payments / total_beneficiaries
+  )
+
+summary_metrics <- df %>%
+  group_by(income_group) %>%
+  summarize(
+    mean_services_per_beneficiary = mean(services_per_beneficiary, na.rm = TRUE),
+    mean_payment_per_beneficiary = mean(payment_per_beneficiary, na.rm = TRUE)
+  )
+
+summary_metrics
+```
+
+```{r}
+# t-tests for income groups (might need to do ANOVA or Tukey's here)
+t_test_services <- t.test(
+  df$services_per_beneficiary[df$income_group == "High"],
+  df$services_per_beneficiary[df$income_group == "Low"],
+  na.rm = TRUE
+)
+
+#high vs low payment per beneficiary - Payment per Beneficiary
+t_test_payments <- t.test(
+  df$payment_per_beneficiary[df$income_group == "High"],
+  df$payment_per_beneficiary[df$income_group == "Low"],
+  na.rm = TRUE
+)
+
+# print t-test results
+t_test_services
+t_test_payments
+
+# correlation across groups
+cor_services_income <- cor(df$avg_agi, df$services_per_beneficiary, use = "complete.obs")
+cor_payments_income <- cor(df$avg_agi, df$payment_per_beneficiary, use = "complete.obs")
+
+# list correlation results
+list(
+  correlation_services_income = cor_services_income,
+  correlation_payments_income = cor_payments_income
+)
+
+```
+
+```{r}
+library(ggplot2)
+
+# visualization across income groups
+# boxplot services per beneficary
+ggplot(df, aes(x = income_group, y = services_per_beneficiary, fill = income_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Services per Beneficiary by Income Group",
+    x = "Income Group",
+    y = "Services per Beneficiary"
+  )
+
+# payment per beneficiary
+ggplot(df, aes(x = income_group, y = payment_per_beneficiary, fill = income_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Payment per Beneficiary by Income Group",
+    x = "Income Group",
+    y = "Payment per Beneficiary"
+  )
+
+# correlation scatterplot services per beneficiary
+ggplot(df, aes(x = avg_agi, y = services_per_beneficiary)) +
+  geom_point(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Correlation Between AGI and Services per Beneficiary",
+    x = "Adjusted Gross Income (AGI)",
+    y = "Services per Beneficiary"
+  )
+
+ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary)) +
+  geom_point(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Correlation Between AGI and Payment per Beneficiary",
+    x = "Adjusted Gross Income (AGI)",
+    y = "Payment per Beneficiary"
+  )
+
+```
+
+
+```{r}
+
+#creating a log transformation of histogram to see if visualization is better
+df <- df %>%
+  mutate(
+    log_services_per_beneficiary = log1p(services_per_beneficiary),
+    log_payment_per_beneficiary = log1p(payment_per_beneficiary)
+  )
+
+ggplot(df, aes(x = income_group, y = log_services_per_beneficiary, fill = income_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Log-Transformed Services per Beneficiary by Income Group",
+    x = "Income Group",
+    y = "Log(Services per Beneficiary)"
+  )
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+
+summary_df <- df %>%
+  group_by(income_group) %>%
+  summarize(
+    mean_services = mean(services_per_beneficiary, na.rm = TRUE),
+    se_services = sd(services_per_beneficiary, na.rm = TRUE) / sqrt(n()),
+    mean_payments = mean(payment_per_beneficiary, na.rm = TRUE),
+    se_payments = sd(payment_per_beneficiary, na.rm = TRUE) / sqrt(n())
+    
+  )
+
+ggplot(summary_df, aes(x = income_group, y = mean_services, fill = income_group)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "Mean Services per Beneficiary by Income Group",
+    x = "Income Group",
+    y = "Mean Services per Beneficiary"
+  )
+
+ggplot(summary_df, aes(x = income_group, y = mean_payments, fill = income_group)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "Mean Payments per Beneficiary by Income Group",
+    x = "Income Group",
+    y = "Mean Payments per Beneficiary"
+  )
+
+```

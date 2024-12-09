@@ -87,13 +87,21 @@ hc
 
 summary(df)
 ```
+```{r}
+hist(df$avg_agi,breaks=100)
+```
 
 ```{r}
 library(dplyr)
 
+income_quantiles
+df
 
-income_quantiles <- quantile(df$avg_agi, probs = c(0.33, 0.66), na.rm = TRUE)
+income_quantiles <- quantile(df$avg_agi, probs = seq(0.2, 0.8, by = 0.2), na.rm = TRUE)
 
+```
+
+```{r}
 df <- df %>%
   mutate(income_group = case_when(
     avg_agi <= income_quantiles[1] ~ "Low",
@@ -101,6 +109,8 @@ df <- df %>%
     avg_agi > income_quantiles[2] ~ "High",
     TRUE ~ NA_character_
   ))
+
+
 
 table(df$income_group)
 

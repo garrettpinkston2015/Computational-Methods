@@ -88,7 +88,8 @@ hc
 summary(df)
 ```
 ```{r}
-hist(df$avg_agi,breaks=100)
+hist(log(df$avg_agi + 1), 
+     breaks = 50)
 ```
 
 ```{r}
@@ -104,9 +105,11 @@ income_quantiles <- quantile(df$avg_agi, probs = seq(0.2, 0.8, by = 0.2), na.rm 
 ```{r}
 df <- df %>%
   mutate(income_group = case_when(
-    avg_agi <= income_quantiles[1] ~ "Low",
-    avg_agi > income_quantiles[1] & avg_agi <= income_quantiles[2] ~ "Middle",
-    avg_agi > income_quantiles[2] ~ "High",
+    avg_agi <= income_quantiles[1] ~ "Lower Class",
+    avg_agi > income_quantiles[1] & avg_agi <= income_quantiles[2] ~ "Lower Middle",
+    avg_agi > income_quantiles[2] & avg_agi <= income_quantiles[3] ~ "True Middle",
+    avg_agi > income_quantiles[3] & avg_agi <= income_quantiles[4] ~ "Upper Middle",
+    avg_agi > income_quantiles[4] ~ "Upper Class",
     TRUE ~ NA_character_
   ))
 
@@ -133,15 +136,15 @@ summary_metrics
 ```{r}
 # t-tests for income groups (might need to do ANOVA or Tukey's here)
 t_test_services <- t.test(
-  df$services_per_beneficiary[df$income_group == "High"],
-  df$services_per_beneficiary[df$income_group == "Low"],
+  df$services_per_beneficiary[df$income_group == "Upper Class"],
+  df$services_per_beneficiary[df$income_group == "Lower Class"],
   na.rm = TRUE
 )
 
 #high vs low payment per beneficiary - Payment per Beneficiary
 t_test_payments <- t.test(
-  df$payment_per_beneficiary[df$income_group == "High"],
-  df$payment_per_beneficiary[df$income_group == "Low"],
+  df$payment_per_beneficiary[df$income_group == "Upper Class"],
+  df$payment_per_beneficiary[df$income_group == "Lower Class"],
   na.rm = TRUE
 )
 

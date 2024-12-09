@@ -27,29 +27,14 @@ hc = subset(hc_expanded, select = c("Rndrng_Prvdr_Zip5", "Tot_Benes", "Tot_Srvcs
 
 
 ```{r}
-hc
-```
-
-```{r}
-agi_expanded[agi_expanded$zipcode == 95124, ]
-
-agi[agi$zipcode == 95124, ]
-
-```
-
-```{r}
-library(dplyr)
-
+# agi is listed in thousands
+# to find average agi, we need to divide agi by nreturns
 
 colnames(hc)[colnames(hc) == 'Rndrng_Prvdr_Zip5'] <- 'zipcode'
 
 colnames(agi)[colnames(agi) == 'agi_stub'] <- 'agi_bracket'
 colnames(agi)[colnames(agi) == 'A00100'] <- 'agi'
 colnames(agi)[colnames(agi) == 'N1'] <- 'nreturns'
-
-
-agi['avg_agi'] = agi['agi']/agi['nreturns']
-agi[agi$zipcode == 95125, ]
 
 
 ```
@@ -256,25 +241,6 @@ ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary)) +
 
 
 ```{r}
-
-#creating a log transformation of histogram to see if visualization is better
-df <- df %>%
-  mutate(
-    log_services_per_beneficiary = log1p(services_per_beneficiary),
-    log_payment_per_beneficiary = log1p(payment_per_beneficiary)
-  )
-
-ggplot(df, aes(x = income_group, y = log_services_per_beneficiary, fill = income_group)) +
-  geom_boxplot() +
-  theme_minimal() +
-  labs(
-    title = "Log-Transformed Services per Beneficiary by Income Group",
-    x = "Income Group",
-    y = "Log(Services per Beneficiary)"
-  )
-```
-
-```{r}
 library(ggplot2)
 library(dplyr)
 
@@ -282,10 +248,8 @@ summary_df <- df %>%
   group_by(income_group) %>%
   summarize(
     mean_services = mean(services_per_beneficiary, na.rm = TRUE),
-    se_services = sd(services_per_beneficiary, na.rm = TRUE) / sqrt(n()),
     mean_payments = mean(payment_per_beneficiary, na.rm = TRUE),
-    se_payments = sd(payment_per_beneficiary, na.rm = TRUE) / sqrt(n())
-    
+
   )
 
 ggplot(summary_df, aes(x = income_group, y = mean_services, fill = income_group)) +

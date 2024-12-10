@@ -72,7 +72,7 @@ df <- na.omit(df)
 income_quantiles <- quantile(df$avg_agi, probs = seq(0.2, 0.8, by = 0.2), na.rm = TRUE)
 
 df <- df %>%
-  mutate(income_group = case_when(
+  mutate('Income Group' = case_when(
     avg_agi <= income_quantiles[1] ~ "Lower Class",
     avg_agi > income_quantiles[1] & avg_agi <= income_quantiles[2] ~ "Lower Middle",
     avg_agi > income_quantiles[2] & avg_agi <= income_quantiles[3] ~ "True Middle",
@@ -93,7 +93,7 @@ df <- df %>%
   )
 
 summary_metrics <- df %>%
-  group_by(income_group) %>%
+  group_by(`Income Group`) %>%
   summarize(
     mean_services_per_beneficiary = mean(services_per_beneficiary, na.rm = TRUE),
     mean_payment_per_beneficiary = mean(payment_per_beneficiary, na.rm = TRUE)
@@ -107,7 +107,7 @@ library(ggplot2)
 
 # visualization across income groups
 # boxplot services per beneficary
-ggplot(df, aes(x = income_group, y = services_per_beneficiary, fill = income_group)) +
+ggplot(df, aes(x = `Income Group`, y = services_per_beneficiary, fill = `Income Group`)) +
   geom_boxplot() +
   theme_minimal() +
   labs(
@@ -117,7 +117,7 @@ ggplot(df, aes(x = income_group, y = services_per_beneficiary, fill = income_gro
   )
 
 # payment per beneficiary
-ggplot(df, aes(x = income_group, y = payment_per_beneficiary, fill = income_group)) +
+ggplot(df, aes(x = `Income Group`, y = payment_per_beneficiary, fill = `Income Group`)) +
   geom_boxplot() +
   theme_minimal() +
   labs(
@@ -156,7 +156,7 @@ library(ggplot2)
 
 # visualization across income groups
 # boxplot services per beneficary
-ggplot(df, aes(x = income_group, y = services_per_beneficiary, fill = income_group)) +
+ggplot(df, aes(x = `Income Group`, y = services_per_beneficiary, fill = `Income Group`)) +
   geom_boxplot() +
   theme_minimal() +
   labs(
@@ -166,7 +166,7 @@ ggplot(df, aes(x = income_group, y = services_per_beneficiary, fill = income_gro
   )
 
 # payment per beneficiary
-ggplot(df, aes(x = income_group, y = payment_per_beneficiary, fill = income_group)) +
+ggplot(df, aes(x = `Income Group`, y = payment_per_beneficiary, fill = `Income Group`)) +
   geom_boxplot() +
   theme_minimal() +
   labs(
@@ -193,7 +193,7 @@ list(
 )
 
 # correlation scatterplot services per beneficiary
-ggplot(df, aes(x = avg_agi, y = services_per_beneficiary, color = income_group)) +
+ggplot(df, aes(x = avg_agi, y = services_per_beneficiary, color = `Income Group`)) +
   geom_point(alpha = 0.6) +
   theme_minimal() +
   labs(
@@ -202,7 +202,7 @@ ggplot(df, aes(x = avg_agi, y = services_per_beneficiary, color = income_group))
     y = "Services per Beneficiary"
   )
 
-ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary, color = income_group)) +
+ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary, color = `Income Group`)) +
   geom_point(alpha = 0.6) +
   theme_minimal() +
   labs(
@@ -215,18 +215,19 @@ ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary, color = income_group)) 
 
 ```{r}
 
-df$income_group <- factor(df$income_group, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
+#df$`Income Group` <- factor(df$`Income Group`, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
 
-anova_services <- aov(services_per_beneficiary ~ income_group, data = df)
-anova_payments <- aov(payment_per_beneficiary ~ income_group, data = df)
+anova_services <- aov(services_per_beneficiary ~ `Income Group`, data = df)
+anova_payments <- aov(payment_per_beneficiary ~ `Income Group`, data = df)
+
+tukey_services <- TukeyHSD(anova_services)
+tukey_payments <- TukeyHSD(anova_payments)
 
 summary(anova_services)
 summary(anova_payments)
 ```
 ```{r}
 
-tukey_services <- TukeyHSD(anova_services)
-tukey_payments <- TukeyHSD(anova_payments)
 
 print(tukey_services)
 print(tukey_payments)
@@ -242,14 +243,14 @@ library(ggplot2)
 library(dplyr)
 
 summary_df <- df %>%
-  group_by(income_group) %>%
+  group_by(`Income Group`) %>%
   summarize(
     mean_services = mean(services_per_beneficiary, na.rm = TRUE),
     mean_payments = mean(payment_per_beneficiary, na.rm = TRUE),
 
   )
 
-ggplot(summary_df, aes(x = income_group, y = mean_services, fill = income_group)) +
+ggplot(summary_df, aes(x = `Income Group`, y = mean_services, fill = `Income Group`)) +
   geom_bar(stat = "identity", position = position_dodge(), width = 0.7) +
   theme_minimal() +
   labs(
@@ -258,7 +259,7 @@ ggplot(summary_df, aes(x = income_group, y = mean_services, fill = income_group)
     y = "Mean Services per Beneficiary"
   )
 
-ggplot(summary_df, aes(x = income_group, y = mean_payments, fill = income_group)) +
+ggplot(summary_df, aes(x = `Income Group`, y = mean_payments, fill = `Income Group`)) +
   geom_bar(stat = "identity", position = position_dodge(), width = 0.7) +
   theme_minimal() +
   labs(

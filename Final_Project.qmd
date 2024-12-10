@@ -11,6 +11,7 @@ STAT506 Final Project.
 ## Data Import
 
 ```{r}
+# load in initial data 
 agi_expanded <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Final/Data/20zpallagi (1).csv")
 hc_expanded <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Final/Data/Medicare_Physician_Other_Practitioners_by_Provider_2020.csv")
 
@@ -18,6 +19,8 @@ hc_expanded <- read.csv("/Users/garrettpinkston/Desktop/Michigan/STAT506/Final/D
 
 
 ```{r}
+# subset the data 
+
 agi = subset(agi_expanded, select = c("zipcode", "agi_stub", "A00100","N1"))
 
 hc = subset(hc_expanded, select = c("Rndrng_Prvdr_Zip5", "Tot_Benes", "Tot_Srvcs", "Tot_Mdcr_Pymt_Amt"))
@@ -28,6 +31,7 @@ hc = subset(hc_expanded, select = c("Rndrng_Prvdr_Zip5", "Tot_Benes", "Tot_Srvcs
 # agi is listed in thousands
 # to find average agi, we need to divide agi by nreturns
 
+# rename columns in both dataset to symbolic names
 colnames(hc)[colnames(hc) == 'Rndrng_Prvdr_Zip5'] <- 'zipcode'
 
 colnames(agi)[colnames(agi) == 'agi_stub'] <- 'agi_bracket'
@@ -42,35 +46,41 @@ library(dplyr)
 
 # find average agi and total agi by zipcode
 agi <- agi %>%
-  group_by(zipcode) %>%
+  group_by(zipcode) %>% #group by zipcode 
   summarize(
-    avg_agi = sum(agi, na.rm = TRUE) / sum(nreturns, na.rm = TRUE), 
-    total_agi = sum(agi, na.rm = TRUE)
+    avg_agi = sum(agi, na.rm = TRUE) / sum(nreturns, na.rm = TRUE), #find average agi 
+    total_agi = sum(agi, na.rm = TRUE) #find total agi (might not need to do this)
   )
 
 # find total beneficiaries, services and payment by zipcode
 hc <- hc %>%
   group_by(zipcode) %>%
-  summarize(
-    total_beneficiaries = sum(Tot_Benes, na.rm = TRUE),
-    total_services = sum(Tot_Srvcs, na.rm = TRUE),
-    total_payments = sum(Tot_Mdcr_Pymt_Amt, na.rm = TRUE)
+  summarize( 
+    total_beneficiaries = sum(Tot_Benes, na.rm = TRUE), #total beneficiaries by zipcode
+    total_services = sum(Tot_Srvcs, na.rm = TRUE), #total services by zipcode
+    total_payments = sum(Tot_Mdcr_Pymt_Amt, na.rm = TRUE) #total payments by zipcode
   )
 
 
-df <- merge(agi, hc, by = "zipcode")
+df <- merge(agi, hc, by = "zipcode") #merge both datasets into one
 
+#filter zipcodes for only 5 digit zipcodes, 
+# dropping 99999 (listed in data dictionary) as "unknown" zipcode
 df <- df %>%
   filter(grepl("^\\d{5}$", zipcode) & zipcode != "99999")
 
+#drop nans
 df <- na.omit(df)
+
 
 ```
 
 
 ```{r}
+#using 5 income quintiles, per textbook cited in paper
 income_quantiles <- quantile(df$avg_agi, probs = seq(0.2, 0.8, by = 0.2), na.rm = TRUE)
 
+#separating into 5 income classes depending where agi lands
 df <- df %>%
   mutate('Income Group' = case_when(
     avg_agi <= income_quantiles[1] ~ "Lower Class",
@@ -85,13 +95,14 @@ income_quantiles
 ```
 
 ```{r}
-
+#calculate services per beneficiary and payment per beneficiary
 df <- df %>%
   mutate(
     services_per_beneficiary = total_services / total_beneficiaries,
     payment_per_beneficiary = total_payments / total_beneficiaries
   )
 
+# find mean services per beneficiary and payment per beneficiary across income group
 summary_metrics <- df %>%
   group_by(`Income Group`) %>%
   summarize(
@@ -100,12 +111,16 @@ summary_metrics <- df %>%
   )
 
 summary_metrics
+
+dim(df)
+
 ```
 
 ```{r}
 library(ggplot2)
 
-# visualization across income groups
+# Creating initial visualizations across income groups
+
 # boxplot services per beneficary
 ggplot(df, aes(x = `Income Group`, y = services_per_beneficiary, fill = `Income Group`)) +
   geom_boxplot() +
@@ -129,24 +144,51 @@ ggplot(df, aes(x = `Income Group`, y = payment_per_beneficiary, fill = `Income G
 
 
 ```{r}
-#Deal with outliers
+
+#' Remove Outliers from a dataframe cokumn
+#'
+#' This function removes rows from a data frame where the values in a specified column 
+#' fall outside the interquartile range (IQR) bounds (1.5 times below Q1 or above Q3).
+#'
+#' @param df A data frame containing the data.
+#' @param col A string specifying the column name for which to remove outliers.
+#'
+#' @return A filtered data frame with outliers removed from the specified column.
+#' @export
+#'
+#' @examples
+#' # Example data frame
+#' data <- data.frame(
+#'   value = c(10, 12, 14, 100, 18, 20)
+#' )
+#' # Remove outliers from the 'value' column
+#' clean_data <- remove_outliers(data, "value")
+
 remove_outliers <- function(df, col) {
-  Q1 <- quantile(df[[col]], 0.25, na.rm = TRUE) 
-  Q3 <- quantile(df[[col]], 0.75, na.rm = TRUE) 
+  Q1 <- quantile(df[[col]], 0.25, na.rm = TRUE) #find q1 of dataframe column
+  Q3 <- quantile(df[[col]], 0.75, na.rm = TRUE) #find q3 of dataframe column
   IQR <- Q3 - Q1  # Interquartile range
   
+  # Calculate bounds
   lower_bound <- Q1 - 1.5 * IQR
   upper_bound <- Q3 + 1.5 * IQR
   
+  #return filtered dataframe of all data that falls between bounds
   df <- df %>%
     filter(df[[col]] >= lower_bound & df[[col]] <= upper_bound)
   
   return(df)
 }
 
+# removing outliers for 3 columns examined with heavy outliers
+
 df <- remove_outliers(df, "services_per_beneficiary")
 df <- remove_outliers(df, "payment_per_beneficiary")
 df <- remove_outliers(df, "avg_agi")
+
+#calculate remaining dimensions of dataframe
+dim(df)
+
 
 ```
 
@@ -182,17 +224,17 @@ ggplot(df, aes(x = `Income Group`, y = payment_per_beneficiary, fill = `Income G
 
 ```{r}
 
-# correlation across groups
+# correlation across groups of average agi, services per beneficiary and payment per beneficiary
 cor_services_income <- cor(df$avg_agi, df$services_per_beneficiary, use = "complete.obs")
 cor_payments_income <- cor(df$avg_agi, df$payment_per_beneficiary, use = "complete.obs")
 
-# list correlation results
+# print the correlation results
 list(
   correlation_services_income = cor_services_income,
   correlation_payments_income = cor_payments_income
 )
 
-# correlation scatterplot services per beneficiary
+# correlation scatterplot of average agi and  services per beneficiary
 ggplot(df, aes(x = avg_agi, y = services_per_beneficiary, color = `Income Group`)) +
   geom_point(alpha = 0.6) +
   theme_minimal() +
@@ -202,6 +244,7 @@ ggplot(df, aes(x = avg_agi, y = services_per_beneficiary, color = `Income Group`
     y = "Services per Beneficiary"
   )
 
+# correlation scatterplot of average agi and  payment per beneficiary
 ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary, color = `Income Group`)) +
   geom_point(alpha = 0.6) +
   theme_minimal() +
@@ -215,24 +258,28 @@ ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary, color = `Income Group`)
 
 ```{r}
 
-
+# make sure incomegroup only falls into these factors (for ANOVA and Tukey's)
 df$incomegroup <- factor(df$`Income Group`, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
 
+#anova for services and payments 
 anova_services <- aov(services_per_beneficiary ~ incomegroup, data = df)
 anova_payments <- aov(payment_per_beneficiary ~ incomegroup, data = df)
 
-
+# Rename income group column for output 
 df$`Income Group` <- factor(df$`Income Group`, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
 
 
-
+#print anova results
 summary(anova_services)
 summary(anova_payments)
 ```
 ```{r}
+
+#since it is a significant anova result, use Tukey's for pairwise differences
 tukey_services <- TukeyHSD(anova_services)
 tukey_payments <- TukeyHSD(anova_payments)
 
+#print results of Tukey's
 print(tukey_services)
 print(tukey_payments)
 
@@ -246,6 +293,7 @@ print(tukey_payments)
 library(ggplot2)
 library(dplyr)
 
+#Summarize mean services and payments per income group
 summary_df <- df %>%
   group_by(`Income Group`) %>%
   summarize(
@@ -254,6 +302,7 @@ summary_df <- df %>%
 
   )
 
+# make barchart for mean services per beneficiary across income groups
 ggplot(summary_df, aes(x = `Income Group`, y = mean_services, fill = `Income Group`)) +
   geom_bar(stat = "identity", position = position_dodge(), width = 0.7) +
   theme_minimal() +
@@ -263,6 +312,7 @@ ggplot(summary_df, aes(x = `Income Group`, y = mean_services, fill = `Income Gro
     y = "Mean Services per Beneficiary"
   )
 
+# make barchart for mean payments per beneficiary across income groups
 ggplot(summary_df, aes(x = `Income Group`, y = mean_payments, fill = `Income Group`)) +
   geom_bar(stat = "identity", position = position_dodge(), width = 0.7) +
   theme_minimal() +
@@ -272,4 +322,9 @@ ggplot(summary_df, aes(x = `Income Group`, y = mean_payments, fill = `Income Gro
     y = "Mean Payments per Beneficiary"
   )
 
+```
+
+```{r}
+#print numerical mean services and payments per beneficiary group
+summary_df
 ```

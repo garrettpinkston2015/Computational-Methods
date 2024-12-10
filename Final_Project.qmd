@@ -215,19 +215,23 @@ ggplot(df, aes(x = avg_agi, y = payment_per_beneficiary, color = `Income Group`)
 
 ```{r}
 
-#df$`Income Group` <- factor(df$`Income Group`, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
 
-anova_services <- aov(services_per_beneficiary ~ `Income Group`, data = df)
-anova_payments <- aov(payment_per_beneficiary ~ `Income Group`, data = df)
+df$incomegroup <- factor(df$`Income Group`, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
 
-tukey_services <- TukeyHSD(anova_services)
-tukey_payments <- TukeyHSD(anova_payments)
+anova_services <- aov(services_per_beneficiary ~ incomegroup, data = df)
+anova_payments <- aov(payment_per_beneficiary ~ incomegroup, data = df)
+
+
+df$`Income Group` <- factor(df$`Income Group`, levels = c("Lower Class", "Lower Middle", "True Middle", "Upper Middle", "Upper Class"))
+
+
 
 summary(anova_services)
 summary(anova_payments)
 ```
 ```{r}
-
+tukey_services <- TukeyHSD(anova_services)
+tukey_payments <- TukeyHSD(anova_payments)
 
 print(tukey_services)
 print(tukey_payments)
